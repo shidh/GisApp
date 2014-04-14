@@ -4,5 +4,7 @@
     <string name="app_name">GisApp</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="sendPhoto">Send photo</string>
+    <string name="takePhoto">Take photo</string>
 
 </resources>
