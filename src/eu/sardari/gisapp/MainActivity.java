@@ -5,6 +5,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.koushikdutta.async.future.FutureCallback;
 import com.koushikdutta.ion.Ion;
 import com.koushikdutta.ion.Response;
@@ -23,22 +30,21 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.provider.MediaStore;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements GooglePlayServicesClient.ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
 	private static ArrayList<File> photoFiles;
 	private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
+	private LocationClient locationClient;
+	private LocationRequest locationRequest;
 
 	/** Create a file Uri for saving an image or video */
 	private Uri getOutputMediaFileUri() {
 
-		if (Environment.getExternalStorageState().equals(
-				Environment.MEDIA_MOUNTED)) {
+		if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 
 			// Store files in a private folder only accessible by the
 			// application
-			File mediaStorageDir = new File(
-					getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-					"camera");
+			File mediaStorageDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "camera");
 
 			// Create the storage directory if it does not exist
 			if (!mediaStorageDir.exists()) {
@@ -49,10 +55,8 @@ public class MainActivity extends ActionBarActivity {
 			}
 
 			// Create a media file name
-			String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
-					.format(new Date());
-			File mediaFile = new File(mediaStorageDir.getPath()
-					+ File.separator + "IMG_" + timeStamp + ".jpg");
+			String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+			File mediaFile = new File(mediaStorageDir.getPath() + File.separator + "IMG_" + timeStamp + ".jpg");
 
 			return Uri.fromFile(mediaFile);
 		}
@@ -95,60 +99,39 @@ public class MainActivity extends ActionBarActivity {
 			}
 		});
 
+		locationClient = new LocationClient(this, this, this);
+		locationRequest = LocationRequest.create();
+		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		locationRequest.setInterval(5000);
+		locationRequest.setFastestInterval(1000);
 	}
 
 	private void sendPhoto() {
 
-		if (photoFiles != null && !photoFiles.isEmpty()) {
+		if (photoFiles != null && !photoFiles.isEmpty() && servicesConnected()) {
 
-			LocationManager locationManager = (LocationManager) this
-					.getSystemService(Context.LOCATION_SERVICE);
-			Location location = locationManager
-					.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-			if (location == null) {
-				location = locationManager
-						.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-			}
+			locationClient.requestLocationUpdates(locationRequest, this);
+			Location location = locationClient.getLastLocation();
+
 			if (location != null) {
 
 				final ArrayList<File> files = photoFiles;
-
-				Ion.with(this, "http://play.localdomain/savePOI/")
-						.setMultipartParameter("accuracy",
-								String.valueOf(location.getAccuracy()))
-						.setMultipartParameter("altitude",
-								String.valueOf(location.getAltitude()))
-						.setMultipartParameter("bearing",
-								String.valueOf(location.getBearing()))
-						.setMultipartParameter("latitude",
-								String.valueOf(location.getLatitude()))
-						.setMultipartParameter("longitude",
-								String.valueOf(location.getLongitude()))
-						.setMultipartParameter("provider",
-								String.valueOf(location.getProvider()))
-						.setMultipartParameter("time",
-								String.valueOf(location.getTime())).asString()
-						.withResponse()
+				Ion.with(this, "https://www.grid2osm.org/createPoi/").setMultipartParameter("accuracy", String.valueOf(location.getAccuracy()))
+						.setMultipartParameter("altitude", String.valueOf(location.getAltitude())).setMultipartParameter("bearing", String.valueOf(location.getBearing()))
+						.setMultipartParameter("latitude", String.valueOf(location.getLatitude())).setMultipartParameter("longitude", String.valueOf(location.getLongitude()))
+						.setMultipartParameter("provider", String.valueOf(location.getProvider())).setMultipartParameter("time", String.valueOf(location.getTime())).asString().withResponse()
 						.setCallback(new FutureCallback<Response<String>>() {
 							@Override
-							public void onCompleted(Exception e,
-									Response<String> result) {
+							public void onCompleted(Exception e, Response<String> result) {
 
-								File echoedFile = MainActivity.this
-										.getFileStreamPath("echo");
+								File echoedFile = MainActivity.this.getFileStreamPath("echo");
 
 								if (files != null && result != null) {
 									String poiId = result.getResult();
 
 									for (File file : files) {
 										if (file.exists()) {
-											Ion.with(MainActivity.this,
-													"http://play.localdomain/savePicture/")
-													.setMultipartParameter(
-															"id", poiId)
-													.setMultipartFile("image",
-															file)
-													.write(echoedFile);
+											Ion.with(MainActivity.this, "https://www.grid2osm.org/savePicture/").setMultipartParameter("id", poiId).setMultipartFile("image", file).write(echoedFile);
 										}
 									}
 								}
@@ -179,5 +162,51 @@ public class MainActivity extends ActionBarActivity {
 
 		// start the image capture Intent
 		startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
+	}
+
+	private boolean servicesConnected() {
+		int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+
+		if (ConnectionResult.SUCCESS == resultCode) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		locationClient.connect();
+	}
+
+	@Override
+	protected void onStop() {
+		locationClient.disconnect();
+		super.onStop();
+	}
+
+	@Override
+	public void onLocationChanged(Location arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onConnectionFailed(ConnectionResult arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onConnected(Bundle arg0) {
+		// TODO Auto-generated method stub
+		locationClient.requestLocationUpdates(locationRequest, this);
+	}
+
+	@Override
+	public void onDisconnected() {
+		// TODO Auto-generated method stub
+
 	}
 }
