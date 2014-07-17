@@ -6,19 +6,31 @@ import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 
+import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 
 public class MainActivity extends FragmentActivity implements LocationListener,
 		GooglePlayServicesClient.ConnectionCallbacks,
-		GooglePlayServicesClient.OnConnectionFailedListener {
+		GooglePlayServicesClient.OnConnectionFailedListener,
+		GpsSettings.GpsListener {
 
 	// Object that holds accuracy and frequency parameters
 	private LocationRequest mLocationRequest;
 
 	// Current instantiation of the location client
 	private LocationClient mLocationClient;
+
+	// Check whether the gpg sensor is activated
+	private boolean gpgIsEnabled() {
+		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+	}
 
 	/*
 	 * Called by Location Services when the request to connect the client
@@ -32,7 +44,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	@Override
-	public void onConnectionFailed(ConnectionResult arg0) {
+	public void onConnectionFailed(ConnectionResult connectionResult) {
 
 	}
 
@@ -60,12 +72,32 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	@Override
+	public void onDialogNegativeClick(DialogFragment dialog) {
+		// User touched the dialog's negative button
+		if (!gpgIsEnabled()) {
+			finish();
+		}
+	}
+
+	/*
+	 * The dialog fragment receives a reference to this Activity through the
+	 * Fragment.onAttach() callback, which it uses to call the following methods
+	 * defined by the NoticeDialogFragment.NoticeDialogListener interface
+	 */
+	@Override
+	public void onDialogPositiveClick(DialogFragment dialog) {
+		// User touched the dialog's positive button
+		Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+		startActivity(intent);
+	}
+
+	@Override
 	public void onDisconnected() {
 
 	}
 
 	@Override
-	public void onLocationChanged(Location arg0) {
+	public void onLocationChanged(Location location) {
 
 	}
 
@@ -74,6 +106,24 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	protected void onStart() {
 
 		super.onStart();
+
+		/*
+		 * The activity is either being restarted or started for the first time
+		 * so this is where we should make sure that GPS is enabled
+		 */
+
+		if (!gpgIsEnabled()) {
+
+			/*
+			 * Create a dialog here that requests the user to enable GPS, and
+			 * use an intent with the
+			 * android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS action
+			 * to take the user to the Settings screen to enable GPS when they
+			 * click "OK"
+			 */
+			GpsSettings gpsSettings = new GpsSettings();
+			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
+		}
 
 		/*
 		 * Connect the client. Don't re-start any requests here; instead, wait
