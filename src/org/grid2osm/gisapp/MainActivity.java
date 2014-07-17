@@ -2,6 +2,7 @@ package org.grid2osm.gisapp;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
@@ -18,7 +19,8 @@ import android.support.v4.app.FragmentActivity;
 public class MainActivity extends FragmentActivity implements LocationListener,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
-		GpsSettings.GpsListener {
+		GpsSettingsDialog.GpsSettingsListener,
+		PlayServicesDialog.PlayServicesListener {
 
 	// Object that holds accuracy and frequency parameters
 	private LocationRequest mLocationRequest;
@@ -27,7 +29,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	private LocationClient mLocationClient;
 
 	// Check whether the gpg sensor is activated
-	private boolean gpgIsEnabled() {
+	private boolean gpsIsEnabled() {
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 	}
@@ -72,9 +74,14 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	@Override
-	public void onDialogNegativeClick(DialogFragment dialog) {
+	public void onDisconnected() {
+
+	}
+
+	@Override
+	public void onGpsSettingsDialogNegativeClick(DialogFragment dialog) {
 		// User touched the dialog's negative button
-		if (!gpgIsEnabled()) {
+		if (!gpsIsEnabled()) {
 			finish();
 		}
 	}
@@ -85,20 +92,20 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	 * defined by the NoticeDialogFragment.NoticeDialogListener interface
 	 */
 	@Override
-	public void onDialogPositiveClick(DialogFragment dialog) {
+	public void onGpsSettingsDialogPositiveClick(DialogFragment dialog) {
 		// User touched the dialog's positive button
 		Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
 		startActivity(intent);
 	}
 
 	@Override
-	public void onDisconnected() {
+	public void onLocationChanged(Location location) {
 
 	}
 
 	@Override
-	public void onLocationChanged(Location location) {
-
+	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
+		finish();
 	}
 
 	// Called when the Activity is restarted, even before it becomes visible.
@@ -107,12 +114,17 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 		super.onStart();
 
+		// Check for the Google play services on the device
+		if (!playIsAvailable()) {
+			PlayServicesDialog playServices = new PlayServicesDialog();
+			playServices.show(getSupportFragmentManager(), "playServices");
+		}
+
 		/*
 		 * The activity is either being restarted or started for the first time
 		 * so this is where we should make sure that GPS is enabled
 		 */
-
-		if (!gpgIsEnabled()) {
+		if (!gpsIsEnabled()) {
 
 			/*
 			 * Create a dialog here that requests the user to enable GPS, and
@@ -121,7 +133,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 			 * to take the user to the Settings screen to enable GPS when they
 			 * click "OK"
 			 */
-			GpsSettings gpsSettings = new GpsSettings();
+			GpsSettingsDialog gpsSettings = new GpsSettingsDialog();
 			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
 		}
 
@@ -148,6 +160,15 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		mLocationClient.disconnect();
 
 		super.onStop();
+	}
+
+	// Chech whether the Google play services are available
+	private boolean playIsAvailable() {
+		if (GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	/**
