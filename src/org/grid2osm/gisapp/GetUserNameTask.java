@@ -8,9 +8,16 @@ import com.google.android.gms.auth.UserRecoverableAuthException;
 
 import android.os.AsyncTask;
 
-public class GetUserNameTask extends AsyncTask<Void, Void, Void> {
+public class GetUserNameTask extends AsyncTask<Void, Void, String> {
+
+	// Used to store the token in the main thread
+	public interface GetUserNameTaskInterface {
+		public void onGetUserNameTaskFinished(String token);
+	}
+
 	MainActivity mActivity;
 	String mScope;
+
 	String mEmail;
 
 	GetUserNameTask(MainActivity activity, String name, String scope) {
@@ -24,20 +31,17 @@ public class GetUserNameTask extends AsyncTask<Void, Void, Void> {
 	 * AsyncTask instance.
 	 */
 	@Override
-	protected Void doInBackground(Void... params) {
+	protected String doInBackground(Void... params) {
+		String token = null;
 		try {
-			String token = fetchToken();
-			if (token != null) {
-				// Insert the good stuff here.
-				// Use the token to access the user's Google data.
-			}
+			token = fetchToken();
 		} catch (IOException e) {
 			// The fetchToken() method handles Google-specific exceptions,
 			// so this indicates something went wrong at a higher level.
 			// TIP: Check for network connectivity before starting the
 			// AsyncTask.
 		}
-		return null;
+		return token;
 	}
 
 	/*
@@ -56,5 +60,10 @@ public class GetUserNameTask extends AsyncTask<Void, Void, Void> {
 			// Report and log the error as appropriate for your app.
 		}
 		return null;
+	}
+
+	@Override
+	protected void onPostExecute(String result) {
+		mActivity.onGetUserNameTaskFinished(result);
 	}
 }

@@ -23,16 +23,21 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.Toast;
 
 public class MainActivity extends FragmentActivity implements LocationListener,
+		GetUserNameTask.GetUserNameTaskInterface,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		PlayServicesDialog.PlayServicesListener {
 
-	// Key for storing the "mEmail" flag in shared preferences
+	// Key for storing the flags in shared preferences
 	public static final String KEY_MEMAIL = "org.grid2osm.mEmail";
+	public static final String KEY_MTOKEN = "org.grid2osm.mToken";
 
 	static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
 	static final int REQUEST_CODE_RECOVER_FROM_AUTH_ERROR = 1001;
@@ -59,6 +64,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	// Handle to a SharedPreferences editor
 	SharedPreferences.Editor mEditor;
 
+	// Token used to support backend verification of user
+	String mToken;
+
 	/*
 	 * Attempts to retrieve the username. If the account is not yet known,
 	 * invoke the picker. Once the account is known, start an instance of the
@@ -69,7 +77,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 			pickUserAccount();
 		} else {
 			if (isDeviceOnline()) {
-				new GetUserNameTask(MainActivity.this, mEmail, SCOPE).execute();
+				new GetUserNameTask(this, mEmail, SCOPE).execute();
 			} else {
 				Toast.makeText(this, R.string.not_online, Toast.LENGTH_LONG)
 						.show();
@@ -141,7 +149,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				mEmail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 				mEditor.putString(KEY_MEMAIL, mEmail);
 				mEditor.commit();
-				
+
 				// With the account name acquired, go get the auth token
 				getUsername();
 			} else if (resultCode == RESULT_CANCELED) {
@@ -207,11 +215,27 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 		// Get an editor
 		mEditor = mPrefs.edit();
+
+		Button button = (Button) findViewById(R.id.logoutIn);
+		button.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				mEmail = null;
+				getUsername();
+			}
+		});
 	}
 
 	@Override
 	public void onDisconnected() {
 
+	}
+
+	@Override
+	public void onGetUserNameTaskFinished(String token) {
+		mToken = token;
+		mEditor.putString(KEY_MTOKEN, mToken);
+		mEditor.commit();
 	}
 
 	@Override
