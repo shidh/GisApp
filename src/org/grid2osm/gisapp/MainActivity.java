@@ -29,7 +29,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 public class MainActivity extends FragmentActivity implements LocationListener,
-		GetUserNameTask.GetUserNameTaskInterface,
+		GetTokenTask.GetTokenTaskInterface,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
@@ -77,7 +77,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 			pickUserAccount();
 		} else {
 			if (isDeviceOnline()) {
-				new GetUserNameTask(this, mEmail, SCOPE).execute();
+				new GetTokenTask(this, mEmail, SCOPE).execute();
 			} else {
 				Toast.makeText(this, R.string.not_online, Toast.LENGTH_LONG)
 						.show();
@@ -232,7 +232,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	@Override
-	public void onGetUserNameTaskFinished(String token) {
+	public void onGetTokenTaskFinished(String token) {
 		mToken = token;
 		mEditor.putString(KEY_MTOKEN, mToken);
 		mEditor.commit();

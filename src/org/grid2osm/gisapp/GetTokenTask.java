@@ -8,11 +8,11 @@ import com.google.android.gms.auth.UserRecoverableAuthException;
 
 import android.os.AsyncTask;
 
-public class GetUserNameTask extends AsyncTask<Void, Void, String> {
+public class GetTokenTask extends AsyncTask<Void, Void, String> {
 
 	// Used to store the token in the main thread
-	public interface GetUserNameTaskInterface {
-		public void onGetUserNameTaskFinished(String token);
+	public interface GetTokenTaskInterface {
+		public void onGetTokenTaskFinished(String token);
 	}
 
 	MainActivity mActivity;
@@ -20,7 +20,7 @@ public class GetUserNameTask extends AsyncTask<Void, Void, String> {
 
 	String mEmail;
 
-	GetUserNameTask(MainActivity activity, String name, String scope) {
+	GetTokenTask(MainActivity activity, String name, String scope) {
 		this.mActivity = activity;
 		this.mScope = scope;
 		this.mEmail = name;
@@ -64,6 +64,6 @@ public class GetUserNameTask extends AsyncTask<Void, Void, String> {
 
 	@Override
 	protected void onPostExecute(String result) {
-		mActivity.onGetUserNameTaskFinished(result);
+		mActivity.onGetTokenTaskFinished(result);
 	}
 }
