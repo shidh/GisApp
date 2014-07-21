@@ -16,6 +16,7 @@ public class GpsSettingsDialog extends DialogFragment {
 	 */
 	public interface GpsSettingsListener {
 		public void onGpsSettingsDialogNegativeClick(DialogFragment dialog);
+
 		public void onGpsSettingsDialogPositiveClick(DialogFragment dialog);
 	}
 

@@ -1,5 +1,13 @@
 package org.grid2osm.gisapp;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+
+import retrofit.RestAdapter;
+
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.android.gms.common.AccountPicker;
@@ -19,7 +27,10 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
@@ -39,9 +50,10 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	public static final String KEY_MEMAIL = "org.grid2osm.mEmail";
 	public static final String KEY_MTOKEN = "org.grid2osm.mToken";
 
-	static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
-	static final int REQUEST_CODE_RECOVER_FROM_AUTH_ERROR = 1001;
-	static final int REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR = 1002;
+	private static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
+	private static final int REQUEST_CODE_RECOVER_FROM_AUTH_ERROR = 1001;
+	private static final int REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR = 1002;
+	private static final int REQUEST_CODE_TAKE_PHOTO_INTENT = 1003;
 
 	// Users's mail address
 	private String mEmail;
@@ -66,6 +78,42 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 	// Token used to support backend verification of user
 	String mToken;
+
+	// Adapter used to make REST requests
+	RestAdapter restAdapter;
+	RestClientInterface restClientInterface;
+
+	// List holding the photos
+	private static ArrayList<File> photoFiles;
+
+	// Path to the photo, used to add the photo to the gallery
+	private String mCurrentPhotoPath;
+
+	// Make the photo accessible in the gallery
+	private void addPhotoToGallery() {
+		Intent mediaScanIntent = new Intent(
+				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+		File f = new File(mCurrentPhotoPath);
+		Uri contentUri = Uri.fromFile(f);
+		mediaScanIntent.setData(contentUri);
+		this.sendBroadcast(mediaScanIntent);
+	}
+
+	// Create a file for saving a photo
+	private File createPhotoFile() throws IOException {
+
+		// Create a photo file name
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
+				.format(new Date());
+		String photoFileName = getString(R.string.app_name) + "_" + timeStamp;
+		File storageDir = Environment
+				.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+		File photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
+
+		// Save a file: path for use with ACTION_VIEW intents
+		mCurrentPhotoPath = "file:" + photoFile.getAbsolutePath();
+		return photoFile;
+	}
 
 	/*
 	 * Attempts to retrieve the username. If the account is not yet known,
@@ -167,6 +215,18 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 			// Receiving a result that follows a GoogleAuthException, try auth
 			// again
 			getUsername();
+		} else if (requestCode == REQUEST_CODE_TAKE_PHOTO_INTENT) {
+			if (resultCode == RESULT_OK) {
+				// Add the photo to the gallery
+				addPhotoToGallery();
+
+				// Photo taken and saved; allow the user to take another one
+				takePhoto();
+			} else if (resultCode == RESULT_CANCELED) {
+				// User cancelled the photo capture
+			} else {
+				// Photo capture failed, advise user
+			}
 		}
 		super.onActivityResult(requestCode, resultCode, data);
 	}
@@ -216,7 +276,32 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		// Get an editor
 		mEditor = mPrefs.edit();
 
-		Button button = (Button) findViewById(R.id.logoutIn);
+		// Initialize the REST adapter
+		restAdapter = new RestAdapter.Builder().setEndpoint(
+				"https://www.grid2osm.org").build();
+		restClientInterface = restAdapter.create(RestClientInterface.class);
+
+		// Button for sending the POI data and photos
+		Button button = (Button) findViewById(R.id.sendData);
+		button.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				sendData();
+			}
+		});
+
+		// Button for taking photos via intent
+		button = (Button) findViewById(R.id.takePhoto);
+		button.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				photoFiles = new ArrayList<File>();
+				takePhoto();
+			}
+		});
+
+		// Account chooser button
+		button = (Button) findViewById(R.id.logoutIn);
 		button.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -344,6 +429,11 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		}
 	}
 
+	// Send the data to the backend server
+	private void sendData() {
+
+	}
+
 	/**
 	 * In response to a request to start updates, send a request to Location
 	 * Services
@@ -360,5 +450,35 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	private void stopPeriodicUpdates() {
 
 		mLocationClient.removeLocationUpdates(this);
+	}
+
+	// Take a photo using an intent
+	private void takePhoto() {
+
+		// Create an intent to take a picture
+		Intent takePhotoIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+
+		// Start the image capture Intent
+		if (takePhotoIntent.resolveActivity(getPackageManager()) != null) {
+
+			// Create a file to save the photo
+			File photoFile = null;
+			try {
+				photoFile = createPhotoFile();
+			} catch (Exception e) {
+
+			}
+
+			// Continue only if the file was successfully created
+			if (photoFile != null) {
+
+				// set the image file name
+				takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+						Uri.fromFile(photoFile));
+
+				startActivityForResult(takePhotoIntent,
+						REQUEST_CODE_TAKE_PHOTO_INTENT);
+			}
+		}
 	}
 }
