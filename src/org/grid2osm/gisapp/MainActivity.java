@@ -1,12 +1,19 @@
 package org.grid2osm.gisapp;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
+import retrofit.Callback;
 import retrofit.RestAdapter;
+import retrofit.RetrofitError;
+import retrofit.client.OkClient;
+import retrofit.client.Response;
+import retrofit.mime.MultipartTypedOutput;
+import retrofit.mime.TypedFile;
+import retrofit.mime.TypedString;
 
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
@@ -17,12 +24,14 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
+import com.squareup.okhttp.OkHttpClient;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
@@ -36,6 +45,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -46,73 +56,73 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		PlayServicesDialog.PlayServicesListener {
 
-	// Key for storing the flags in shared preferences
-	public static final String KEY_MEMAIL = "org.grid2osm.mEmail";
-	public static final String KEY_MTOKEN = "org.grid2osm.mToken";
+	// Attributes for persistent storage
+	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
+	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
+	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
+	private Editor storageEditor;
+	private SharedPreferences storagePrefs;
 
-	private static final int REQUEST_CODE_PICK_ACCOUNT = 1000;
-	private static final int REQUEST_CODE_RECOVER_FROM_AUTH_ERROR = 1001;
-	private static final int REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR = 1002;
-	private static final int REQUEST_CODE_TAKE_PHOTO_INTENT = 1003;
+	// Attributes for starting the intent and used by onActivityResult
+	private static final int INTENT_PICK_ACCOUNT = 1000;
+	private static final int INTENT_RECOVER_FROM_AUTH_ERROR = 1001;
+	private static final int INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR = 1002;
+	private static final int INTENT_TAKE_PHOTO = 1003;
 
-	// Users's mail address
-	private String mEmail;
+	// Attributes used to locate the user
+	private LocationRequest locationRequest;
+	private LocationClient locationClient;
 
-	// Scope of data obtained through the Google API
+	// Attributes used by the REST client
+	private static final String REST_SERVER = "http://www.play.localdomain";
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
-
-	// Object that holds accuracy and frequency parameters
-	private LocationRequest mLocationRequest;
-
-	// Current instantiation of the location client
-	private LocationClient mLocationClient;
-
-	// Name of the prefs file
-	public static final String PREFS_NAME = "org.grid2osm.mPrefs";
-
-	// Handle to SharedPreferences for this app
-	SharedPreferences mPrefs;
-
-	// Handle to a SharedPreferences editor
-	SharedPreferences.Editor mEditor;
-
-	// Token used to support backend verification of user
-	String mToken;
-
-	// Adapter used to make REST requests
-	RestAdapter restAdapter;
-	RestClientInterface restClientInterface;
+	private RestClientInterface restClientInterface;
+	private String gToken;
 
 	// List holding the photos
-	private static ArrayList<File> photoFiles;
+	private ArrayList<TypedFile> photoFiles;
 
-	// Path to the photo, used to add the photo to the gallery
-	private String mCurrentPhotoPath;
+	// Users's Google mail address
+	private String gMail;
+
+	// The photo file where the camera stores the taken photo temporarily
+	private File photoFile;
 
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-		File f = new File(mCurrentPhotoPath);
-		Uri contentUri = Uri.fromFile(f);
+		Uri contentUri = Uri.fromFile(photoFile);
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
 	}
 
-	// Create a file for saving a photo
-	private File createPhotoFile() throws IOException {
+	// Add file to photoFiles to be able to send them later on
+	private void addPhotoToList() {
+		String photoFileUri = Uri.fromFile(photoFile).toString();
+		String mimeType = null;
+		String extension = MimeTypeMap.getFileExtensionFromUrl(photoFileUri);
+		if (extension != null) {
+			MimeTypeMap mime = MimeTypeMap.getSingleton();
+			mimeType = mime.getMimeTypeFromExtension(extension);
+		}
+		photoFiles.add(new TypedFile(mimeType, photoFile));
+	}
 
-		// Create a photo file name
-		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
-				.format(new Date());
-		String photoFileName = getString(R.string.app_name) + "_" + timeStamp;
-		File storageDir = Environment
-				.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-		File photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
+	// Create a file for saving the photo
+	private void createPhotoFile() {
 
-		// Save a file: path for use with ACTION_VIEW intents
-		mCurrentPhotoPath = "file:" + photoFile.getAbsolutePath();
-		return photoFile;
+		try {
+			String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
+					Locale.getDefault()).format(new Date());
+			String photoFileName = getString(R.string.app_name) + "_"
+					+ timeStamp;
+			File storageDir = Environment
+					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+			photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
+		} catch (Exception e) {
+			
+		}
 	}
 
 	/*
@@ -121,11 +131,11 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	 * AsyncTask to get the auth token and do work with it.
 	 */
 	private void getUsername() {
-		if (mEmail == null) {
+		if (gMail == null) {
 			pickUserAccount();
 		} else {
 			if (isDeviceOnline()) {
-				new GetTokenTask(this, mEmail, SCOPE).execute();
+				new GetTokenTask(this, gMail, SCOPE).execute();
 			} else {
 				Toast.makeText(this, R.string.not_online, Toast.LENGTH_LONG)
 						.show();
@@ -133,7 +143,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		}
 	}
 
-	// Check whether the gpg sensor is activated
+	// Check whether the GPS sensor is activated
 	private boolean gpsIsEnabled() {
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -161,7 +171,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 							.getConnectionStatusCode();
 					Dialog dialog = GooglePlayServicesUtil.getErrorDialog(
 							statusCode, MainActivity.this,
-							REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR);
+							INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR);
 					dialog.show();
 				} else if (e instanceof UserRecoverableAuthException) {
 					/*
@@ -173,7 +183,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 					Intent intent = ((UserRecoverableAuthException) e)
 							.getIntent();
 					startActivityForResult(intent,
-							REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR);
+							INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR);
 				}
 			}
 		});
@@ -191,12 +201,12 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == REQUEST_CODE_PICK_ACCOUNT) {
+		if (requestCode == INTENT_PICK_ACCOUNT) {
 			// Receiving a result from the AccountPicker
 			if (resultCode == RESULT_OK) {
-				mEmail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-				mEditor.putString(KEY_MEMAIL, mEmail);
-				mEditor.commit();
+				gMail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+				storageEditor.putString(STORAGE_GMAIL, gMail);
+				storageEditor.commit();
 
 				// With the account name acquired, go get the auth token
 				getUsername();
@@ -210,13 +220,16 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 						.show();
 				finish();
 			}
-		} else if ((requestCode == REQUEST_CODE_RECOVER_FROM_AUTH_ERROR || requestCode == REQUEST_CODE_RECOVER_FROM_PLAY_SERVICES_ERROR)
+		} else if ((requestCode == INTENT_RECOVER_FROM_AUTH_ERROR || requestCode == INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR)
 				&& resultCode == RESULT_OK) {
 			// Receiving a result that follows a GoogleAuthException, try auth
 			// again
 			getUsername();
-		} else if (requestCode == REQUEST_CODE_TAKE_PHOTO_INTENT) {
+		} else if (requestCode == INTENT_TAKE_PHOTO) {
 			if (resultCode == RESULT_OK) {
+				// Add the photo to the photo list to send it later on
+				addPhotoToList();
+
 				// Add the photo to the gallery
 				addPhotoToGallery();
 
@@ -255,30 +268,32 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		setContentView(R.layout.activity_main);
 
 		// Create a new global location parameters object
-		mLocationRequest = LocationRequest.create();
+		locationRequest = LocationRequest.create();
 
 		// Set the update interval ceiling in milliseconds
-		mLocationRequest.setFastestInterval(1000);
+		locationRequest.setFastestInterval(1000);
 
 		// Set the update interval in milliseconds
-		mLocationRequest.setInterval(5000);
+		locationRequest.setInterval(5000);
 
 		// Use high accuracy
-		mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 		// Create a new location client, using the enclosing class to handle
 		// callbacks
-		mLocationClient = new LocationClient(this, this, this);
+		locationClient = new LocationClient(this, this, this);
 
 		// Open Shared Preferences
-		mPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+		storagePrefs = getSharedPreferences(STORAGE_PREFS, Context.MODE_PRIVATE);
 
 		// Get an editor
-		mEditor = mPrefs.edit();
+		storageEditor = storagePrefs.edit();
 
 		// Initialize the REST adapter
-		restAdapter = new RestAdapter.Builder().setEndpoint(
-				"https://www.grid2osm.org").build();
+		OkHttpClient okHttpClient = new OkHttpClient();
+		OkClient okClient = new OkClient(okHttpClient);
+		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
+				.setEndpoint(REST_SERVER).build();
 		restClientInterface = restAdapter.create(RestClientInterface.class);
 
 		// Button for sending the POI data and photos
@@ -295,7 +310,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		button.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				photoFiles = new ArrayList<File>();
+				photoFiles = new ArrayList<TypedFile>();
 				takePhoto();
 			}
 		});
@@ -305,7 +320,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		button.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				mEmail = null;
+				gMail = null;
 				getUsername();
 			}
 		});
@@ -318,9 +333,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 	@Override
 	public void onGetTokenTaskFinished(String token) {
-		mToken = token;
-		mEditor.putString(KEY_MTOKEN, mToken);
-		mEditor.commit();
+		gToken = token;
+		storageEditor.putString(STORAGE_GTOKEN, gToken);
+		storageEditor.commit();
 	}
 
 	@Override
@@ -359,6 +374,16 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 		super.onStart();
 
+		// Restore mEmail and mToken from persistent storage
+		if (storagePrefs.contains(STORAGE_GMAIL)
+				&& storagePrefs.contains(STORAGE_GTOKEN)) {
+			gMail = storagePrefs.getString(STORAGE_GMAIL, null);
+			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
+		} else {
+			gMail = null;
+			getUsername();
+		}
+
 		// Check for the Google play services on the device
 		if (!playIsAvailable()) {
 			PlayServicesDialog playServices = new PlayServicesDialog();
@@ -386,8 +411,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		 * Connect the client. Don't re-start any requests here; instead, wait
 		 * for onResume()
 		 */
-		if (!mLocationClient.isConnected()) {
-			mLocationClient.connect();
+		if (!locationClient.isConnected()) {
+			locationClient.connect();
 		}
 	}
 
@@ -399,12 +424,12 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	protected void onStop() {
 
 		// If the client is connected
-		if (mLocationClient.isConnected()) {
+		if (locationClient.isConnected()) {
 			stopPeriodicUpdates();
 		}
 
 		// After disconnect() is called, the client is considered "dead".
-		mLocationClient.disconnect();
+		locationClient.disconnect();
 
 		super.onStop();
 	}
@@ -417,7 +442,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		String[] accountTypes = new String[] { "com.google" };
 		Intent intent = AccountPicker.newChooseAccountIntent(null, null,
 				accountTypes, false, null, null, null, null);
-		startActivityForResult(intent, REQUEST_CODE_PICK_ACCOUNT);
+		startActivityForResult(intent, INTENT_PICK_ACCOUNT);
 	}
 
 	// Chech whether the Google play services are available
@@ -432,6 +457,47 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	// Send the data to the backend server
 	private void sendData() {
 
+		Location location = locationClient.getLastLocation();
+
+		if (location != null && isDeviceOnline()) {
+
+			Callback<Response> callback = new Callback<Response>() {
+
+				@Override
+				public void failure(RetrofitError error) {
+				}
+
+				@Override
+				public void success(Response response0, Response response1) {
+				}
+			};
+
+			MultipartTypedOutput body = new MultipartTypedOutput();
+			body.addPart("accuracy",
+					new TypedString(String.valueOf(location.getAccuracy())));
+			body.addPart("altitude",
+					new TypedString(String.valueOf(location.getAltitude())));
+			body.addPart("bearing",
+					new TypedString(String.valueOf(location.getBearing())));
+			body.addPart("latitude",
+					new TypedString(String.valueOf(location.getLatitude())));
+			body.addPart("longitude",
+					new TypedString(String.valueOf(location.getLongitude())));
+			body.addPart("provider", new TypedString(location.getProvider()));
+			body.addPart("time",
+					new TypedString(String.valueOf(location.getTime())));
+			body.addPart("token", new TypedString(gToken));
+			if (photoFiles != null && !photoFiles.isEmpty()) {
+				int index = 0;
+				for (TypedFile photoFile : photoFiles) {
+					body.addPart("photo" + index, photoFile);
+					index++;
+				}
+			}
+			restClientInterface.createPoi(body, callback);
+		} else {
+
+		}
 	}
 
 	/**
@@ -440,7 +506,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	 */
 	private void startPeriodicUpdates() {
 
-		mLocationClient.requestLocationUpdates(mLocationRequest, this);
+		locationClient.requestLocationUpdates(locationRequest, this);
 	}
 
 	/**
@@ -449,7 +515,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	 */
 	private void stopPeriodicUpdates() {
 
-		mLocationClient.removeLocationUpdates(this);
+		locationClient.removeLocationUpdates(this);
 	}
 
 	// Take a photo using an intent
@@ -462,12 +528,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		if (takePhotoIntent.resolveActivity(getPackageManager()) != null) {
 
 			// Create a file to save the photo
-			File photoFile = null;
-			try {
-				photoFile = createPhotoFile();
-			} catch (Exception e) {
-
-			}
+			createPhotoFile();
 
 			// Continue only if the file was successfully created
 			if (photoFile != null) {
@@ -476,8 +537,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT,
 						Uri.fromFile(photoFile));
 
-				startActivityForResult(takePhotoIntent,
-						REQUEST_CODE_TAKE_PHOTO_INTENT);
+				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
 		}
 	}
