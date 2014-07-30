@@ -123,7 +123,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 			// Add the photo to the gallery
 			addPhotoToGallery();
 		} else {
-			Toast.makeText(this, R.string.problem_add_photo_to_list_and_gallery,
+			Toast.makeText(this,
+					R.string.problem_add_photo_to_list_and_gallery,
 					Toast.LENGTH_LONG).show();
 		}
 	}
@@ -307,8 +308,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	@Override
 	public void onConnectionFailed(ConnectionResult connectionResult) {
 
-		Toast.makeText(this, R.string.problem_no_localization, Toast.LENGTH_SHORT)
-				.show();
+		Toast.makeText(this, R.string.problem_no_localization,
+				Toast.LENGTH_SHORT).show();
 		finish();
 	}
 
@@ -397,8 +398,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	public void onGpsSettingsDialogNegativeClick(DialogFragment dialog) {
 		// User touched the dialog's negative button
 		if (!gpsIsEnabled()) {
-			Toast.makeText(this, R.string.problem_no_gps,
-					Toast.LENGTH_SHORT).show();
+			Toast.makeText(this, R.string.problem_no_gps, Toast.LENGTH_SHORT)
+					.show();
 			finish();
 		}
 	}
@@ -424,8 +425,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	public void onNetSettingsDialogNegativeClick(DialogFragment dialog) {
 		// User touched the dialog's negative button
 		if (!netIsEnabled()) {
-			Toast.makeText(this, R.string.problem_no_net,
-					Toast.LENGTH_SHORT).show();
+			Toast.makeText(this, R.string.problem_no_net, Toast.LENGTH_SHORT)
+					.show();
 			finish();
 		}
 	}
@@ -439,8 +440,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 	@Override
 	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
-		Toast.makeText(this, R.string.problem_no_play,
-				Toast.LENGTH_SHORT).show();
+		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
+				.show();
 		finish();
 	}
 
@@ -554,10 +555,10 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 				@Override
 				public void success(Response response0, Response response1) {
-					
+
 					/*
-					 *  The poi data and photos were sent successfully.
-					 *  Therefore, we create a new photo list.
+					 * The poi data and photos were sent successfully.
+					 * Therefore, we create a new photo list.
 					 */
 					photoFiles = new ArrayList<TypedFile>();
 				}
