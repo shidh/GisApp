@@ -24,20 +24,20 @@ public class GpsSettingsDialog extends DialogFragment {
 	GpsSettingsListener mListener;
 
 	// Override the Fragment.onAttach() method to instantiate the
-	// NoticeDialogListener
+	// GpsSettingsListener
 	@Override
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
 
 		// Verify that the host activity implements the callback interface
 		try {
-			// Instantiate the NoticeDialogListener so we can send events to the
+			// Instantiate the GpsSettingsListener so we can send events to the
 			// host
 			mListener = (GpsSettingsListener) activity;
 		} catch (ClassCastException e) {
 			// The activity doesn't implement the interface, throw exception
 			throw new ClassCastException(activity.toString()
-					+ " must implement NoticeDialogListener");
+					+ " must implement GpsSettingsListener");
 		}
 	}
 
@@ -48,7 +48,7 @@ public class GpsSettingsDialog extends DialogFragment {
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 		builder.setMessage(R.string.gps_message)
 				.setTitle(R.string.gps_title)
-				.setPositiveButton(R.string.gps_settings,
+				.setPositiveButton(R.string.settings,
 						new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface dialog, int id) {

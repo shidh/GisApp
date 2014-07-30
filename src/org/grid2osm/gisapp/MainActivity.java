@@ -5,7 +5,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.http.HttpStatus;
 import retrofit.Callback;
 import retrofit.RestAdapter;
 import retrofit.RetrofitError;
@@ -54,6 +58,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
+		NetSettingsDialog.NetSettingsListener,
 		PlayServicesDialog.PlayServicesListener {
 
 	// Attributes for persistent storage
@@ -64,22 +69,26 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	private SharedPreferences storagePrefs;
 
 	// Attributes for starting the intent and used by onActivityResult
-	private static final int INTENT_PICK_ACCOUNT = 1000;
-	private static final int INTENT_RECOVER_FROM_AUTH_ERROR = 1001;
-	private static final int INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR = 1002;
-	private static final int INTENT_TAKE_PHOTO = 1003;
+	private static final int INTENT_ENABLE_GPS = 1000;
+	private static final int INTENT_ENABLE_NET = 1001;
+	private static final int INTENT_PICK_ACCOUNT = 1002;
+	private static final int INTENT_RECOVER_FROM_AUTH_ERROR = 1003;
+	private static final int INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR = 1004;
+	private static final int INTENT_TAKE_PHOTO = 1005;
 
 	// Attributes used to locate the user
-	private LocationRequest locationRequest;
+	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
+	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
+	private LocationRequest locationRequest;
 
 	// Attributes used by the REST client
 	private static final String REST_SERVER = "http://www.play.localdomain";
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
-	private RestClientInterface restClientInterface;
 	private String gToken;
+	private RestClientInterface restClientInterface;
 
-	// List holding the photos
+	// List holding the photos temporarily
 	private ArrayList<TypedFile> photoFiles;
 
 	// Users's Google mail address
@@ -87,6 +96,10 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 	// The photo file where the camera stores the taken photo temporarily
 	private File photoFile;
+
+	// Synchronous or asynchronous token request
+	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
+	private Boolean isSynchronous;
 
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
@@ -98,15 +111,21 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	// Add file to photoFiles to be able to send them later on
-	private void addPhotoToList() {
+	private void addPhotoToListAndGallery() {
 		String photoFileUri = Uri.fromFile(photoFile).toString();
 		String mimeType = null;
 		String extension = MimeTypeMap.getFileExtensionFromUrl(photoFileUri);
 		if (extension != null) {
 			MimeTypeMap mime = MimeTypeMap.getSingleton();
 			mimeType = mime.getMimeTypeFromExtension(extension);
+			photoFiles.add(new TypedFile(mimeType, photoFile));
+
+			// Add the photo to the gallery
+			addPhotoToGallery();
+		} else {
+			Toast.makeText(this, R.string.problem_add_photo_to_list_and_gallery,
+					Toast.LENGTH_LONG).show();
 		}
-		photoFiles.add(new TypedFile(mimeType, photoFile));
 	}
 
 	// Create a file for saving the photo
@@ -121,24 +140,37 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
 			photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
 		} catch (Exception e) {
-			
+			Toast.makeText(this, R.string.problem_create_file,
+					Toast.LENGTH_LONG).show();
 		}
 	}
 
 	/*
 	 * Attempts to retrieve the username. If the account is not yet known,
 	 * invoke the picker. Once the account is known, start an instance of the
-	 * AsyncTask to get the auth token and do work with it.
+	 * AsyncTask to get the authentication token and work with it.
 	 */
 	private void getUsername() {
 		if (gMail == null) {
 			pickUserAccount();
-		} else {
-			if (isDeviceOnline()) {
-				new GetTokenTask(this, gMail, SCOPE).execute();
+		} else if (netIsEnabled()) {
+			if (isSynchronous != null && isSynchronous) {
+				isSynchronous = false;
+				try {
+					new GetTokenTask(this, gMail, SCOPE).execute().get(
+							TIME_4_TOKEN_SYNC_REQUEST, TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					Toast.makeText(this, R.string.problem_get_token,
+							Toast.LENGTH_LONG).show();
+				} catch (ExecutionException e) {
+					Toast.makeText(this, R.string.problem_get_token,
+							Toast.LENGTH_LONG).show();
+				} catch (TimeoutException e) {
+					Toast.makeText(this, R.string.problem_get_token,
+							Toast.LENGTH_LONG).show();
+				}
 			} else {
-				Toast.makeText(this, R.string.not_online, Toast.LENGTH_LONG)
-						.show();
+				new GetTokenTask(this, gMail, SCOPE).execute();
 			}
 		}
 	}
@@ -190,18 +222,31 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	// Checks whether the device currently has a network connection
-	private boolean isDeviceOnline() {
+	private boolean netIsEnabled() {
 		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-		if (networkInfo != null && networkInfo.isConnected()) {
-			return true;
+		if (networkInfo != null) {
+			return networkInfo.isConnected();
+		} else {
+			return false;
 		}
-		return false;
 	}
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == INTENT_PICK_ACCOUNT) {
+		if (requestCode == INTENT_ENABLE_GPS) {
+			if (!gpsIsEnabled()) {
+				Toast.makeText(this, R.string.problem_no_gps,
+						Toast.LENGTH_SHORT).show();
+				finish();
+			}
+		} else if (requestCode == INTENT_ENABLE_NET) {
+			if (!netIsEnabled()) {
+				Toast.makeText(this, R.string.problem_no_net,
+						Toast.LENGTH_SHORT).show();
+				finish();
+			}
+		} else if (requestCode == INTENT_PICK_ACCOUNT) {
 			// Receiving a result from the AccountPicker
 			if (resultCode == RESULT_OK) {
 				gMail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
@@ -216,29 +261,29 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				 * account. Notify users that they must pick an account to
 				 * proceed.
 				 */
-				Toast.makeText(this, R.string.pick_account, Toast.LENGTH_SHORT)
-						.show();
+				Toast.makeText(this, R.string.problem_no_account,
+						Toast.LENGTH_SHORT).show();
 				finish();
 			}
 		} else if ((requestCode == INTENT_RECOVER_FROM_AUTH_ERROR || requestCode == INTENT_RECOVER_FROM_PLAY_SERVICES_ERROR)
 				&& resultCode == RESULT_OK) {
-			// Receiving a result that follows a GoogleAuthException, try auth
-			// again
+			/*
+			 * Receiving a result that follows a GoogleAuthException, try auth
+			 * again
+			 */
 			getUsername();
 		} else if (requestCode == INTENT_TAKE_PHOTO) {
 			if (resultCode == RESULT_OK) {
-				// Add the photo to the photo list to send it later on
-				addPhotoToList();
-
-				// Add the photo to the gallery
-				addPhotoToGallery();
+				/*
+				 * Add the photo to the photo list to send it later on and add
+				 * it to the gallery
+				 */
+				addPhotoToListAndGallery();
 
 				// Photo taken and saved; allow the user to take another one
 				takePhoto();
 			} else if (resultCode == RESULT_CANCELED) {
 				// User cancelled the photo capture
-			} else {
-				// Photo capture failed, advise user
 			}
 		}
 		super.onActivityResult(requestCode, resultCode, data);
@@ -255,9 +300,15 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		startPeriodicUpdates();
 	}
 
+	/*
+	 * Called by Location Services when the request to connect the client
+	 * failed. At this point, the apps shows a message and quits.
+	 */
 	@Override
 	public void onConnectionFailed(ConnectionResult connectionResult) {
 
+		Toast.makeText(this, R.string.problem_no_localization, Toast.LENGTH_SHORT)
+				.show();
 		finish();
 	}
 
@@ -271,16 +322,18 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		locationRequest = LocationRequest.create();
 
 		// Set the update interval ceiling in milliseconds
-		locationRequest.setFastestInterval(1000);
+		locationRequest.setFastestInterval(LOCALIZATION_LOWER_LIMIT);
 
 		// Set the update interval in milliseconds
-		locationRequest.setInterval(5000);
+		locationRequest.setInterval(LOCALIZATION_UPPER_LIMIT);
 
 		// Use high accuracy
 		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-		// Create a new location client, using the enclosing class to handle
-		// callbacks
+		/*
+		 * Create a new location client, using the enclosing class to handle
+		 * callbacks
+		 */
 		locationClient = new LocationClient(this, this, this);
 
 		// Open Shared Preferences
@@ -310,7 +363,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		button.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				photoFiles = new ArrayList<TypedFile>();
+				if (photoFiles == null) {
+					photoFiles = new ArrayList<TypedFile>();
+				}
 				takePhoto();
 			}
 		});
@@ -342,6 +397,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	public void onGpsSettingsDialogNegativeClick(DialogFragment dialog) {
 		// User touched the dialog's negative button
 		if (!gpsIsEnabled()) {
+			Toast.makeText(this, R.string.problem_no_gps,
+					Toast.LENGTH_SHORT).show();
 			finish();
 		}
 	}
@@ -355,7 +412,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	public void onGpsSettingsDialogPositiveClick(DialogFragment dialog) {
 		// User touched the dialog's positive button
 		Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-		startActivity(intent);
+		startActivityForResult(intent, INTENT_ENABLE_GPS);
 	}
 
 	@Override
@@ -364,7 +421,26 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	@Override
+	public void onNetSettingsDialogNegativeClick(DialogFragment dialog) {
+		// User touched the dialog's negative button
+		if (!netIsEnabled()) {
+			Toast.makeText(this, R.string.problem_no_net,
+					Toast.LENGTH_SHORT).show();
+			finish();
+		}
+	}
+
+	@Override
+	public void onNetSettingsDialogPositiveClick(DialogFragment dialog) {
+		// User touched the dialog's positive button
+		Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+		startActivityForResult(intent, INTENT_ENABLE_NET);
+	}
+
+	@Override
 	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
+		Toast.makeText(this, R.string.problem_no_play,
+				Toast.LENGTH_SHORT).show();
 		finish();
 	}
 
@@ -374,45 +450,48 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 		super.onStart();
 
-		// Restore mEmail and mToken from persistent storage
-		if (storagePrefs.contains(STORAGE_GMAIL)
-				&& storagePrefs.contains(STORAGE_GTOKEN)) {
-			gMail = storagePrefs.getString(STORAGE_GMAIL, null);
-			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
-		} else {
-			gMail = null;
-			getUsername();
-		}
-
 		// Check for the Google play services on the device
 		if (!playIsAvailable()) {
 			PlayServicesDialog playServices = new PlayServicesDialog();
 			playServices.show(getSupportFragmentManager(), "playServices");
 		}
 
-		/*
-		 * The activity is either being restarted or started for the first time
-		 * so this is where we should make sure that GPS is enabled
-		 */
-		if (!gpsIsEnabled()) {
-
-			/*
-			 * Create a dialog here that requests the user to enable GPS, and
-			 * use an intent with the
-			 * android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS action
-			 * to take the user to the Settings screen to enable GPS when they
-			 * click "OK"
-			 */
+		// Check for the availability of GPS
+		else if (!gpsIsEnabled()) {
 			GpsSettingsDialog gpsSettings = new GpsSettingsDialog();
 			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
 		}
 
+		// Check for network connectivity.
+		else if (!netIsEnabled()) {
+			NetSettingsDialog netSettings = new NetSettingsDialog();
+			netSettings.show(getSupportFragmentManager(), "netSettings");
+		}
+
 		/*
-		 * Connect the client. Don't re-start any requests here; instead, wait
-		 * for onResume()
+		 * All requirements are met. So, restore the data of the previous
+		 * session, if available, and start localization.
 		 */
-		if (!locationClient.isConnected()) {
-			locationClient.connect();
+		else {
+
+			// Restore gMail and gToken from persistent storage
+			if (storagePrefs.contains(STORAGE_GMAIL)) {
+				gMail = storagePrefs.getString(STORAGE_GMAIL, null);
+			}
+			if (storagePrefs.contains(STORAGE_GTOKEN)) {
+				gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
+			}
+			if (gMail == null || gToken == null) {
+				getUsername();
+			}
+
+			/*
+			 * Connect the client. Don't re-start any requests here; instead,
+			 * wait for onResume()
+			 */
+			if (!locationClient.isConnected()) {
+				locationClient.connect();
+			}
 		}
 	}
 
@@ -459,16 +538,28 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 		Location location = locationClient.getLastLocation();
 
-		if (location != null && isDeviceOnline()) {
+		if (location != null && netIsEnabled()) {
 
 			Callback<Response> callback = new Callback<Response>() {
 
 				@Override
 				public void failure(RetrofitError error) {
+					if (error.getResponse().getStatus() == HttpStatus.SC_UNAUTHORIZED) {
+						isSynchronous = true;
+						getUsername();
+						sendData();
+					} else {
+					}
 				}
 
 				@Override
 				public void success(Response response0, Response response1) {
+					
+					/*
+					 *  The poi data and photos were sent successfully.
+					 *  Therefore, we create a new photo list.
+					 */
+					photoFiles = new ArrayList<TypedFile>();
 				}
 			};
 
@@ -495,8 +586,6 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				}
 			}
 			restClientInterface.createPoi(body, callback);
-		} else {
-
 		}
 	}
 
