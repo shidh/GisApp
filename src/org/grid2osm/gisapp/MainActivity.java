@@ -56,6 +56,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements
@@ -112,6 +113,10 @@ public class MainActivity extends ActionBarActivity implements
 	// Attributes for the imageView
 	private ImageView imageView;
 	private TypedFile imageViewFile;
+	private TextView cameraTextView;
+	private TextView deleteTextView;
+	private TextView previewTextView;
+	private TextView sendTextView;
 
 	// The view where all GUI items are placed on.
 	private View rootView;
@@ -143,6 +148,17 @@ public class MainActivity extends ActionBarActivity implements
 					R.string.problem_add_photo_to_list_and_gallery,
 					Toast.LENGTH_LONG).show();
 		}
+	}
+
+	private void clearImageView() {
+		imageView.setImageResource(R.drawable.ic_swipe);
+		cameraTextView.setVisibility(View.VISIBLE);
+		deleteTextView.setVisibility(View.VISIBLE);
+		previewTextView.setVisibility(View.VISIBLE);
+		sendTextView.setVisibility(View.VISIBLE);
+		rootView.setBackgroundColor(Color.WHITE);
+		imageViewFile = null;
+		photoFiles = new ArrayList<TypedFile>();
 	}
 
 	// Create a file for saving the photo
@@ -370,8 +386,12 @@ public class MainActivity extends ActionBarActivity implements
 		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
 				this));
 
-		// Initialize the imageView
+		// Initialize the subViews
 		imageView = (ImageView) findViewById(R.id.imageView);
+		cameraTextView = (TextView) findViewById(R.id.camera);
+		deleteTextView = (TextView) findViewById(R.id.delete);
+		previewTextView = (TextView) findViewById(R.id.preview);
+		sendTextView = (TextView) findViewById(R.id.send);
 
 		// Initialize the root view
 		rootView = findViewById(android.R.id.content);
@@ -550,13 +570,6 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	private void clearImageView() {
-		imageView.setImageDrawable(null);
-		rootView.setBackgroundColor(Color.WHITE);
-		imageViewFile = null;
-		photoFiles = new ArrayList<TypedFile>();
-	}
-
 	protected void onSwipeLeft() {
 		if (photoFiles == null) {
 			photoFiles = new ArrayList<TypedFile>();
@@ -669,6 +682,10 @@ public class MainActivity extends ActionBarActivity implements
 				newIndex = photoFiles.size() - 1;
 			}
 			imageViewFile = photoFiles.get(newIndex);
+			cameraTextView.setVisibility(View.GONE);
+			deleteTextView.setVisibility(View.GONE);
+			previewTextView.setVisibility(View.GONE);
+			sendTextView.setVisibility(View.GONE);
 			Uri photoUri = Uri.fromFile(imageViewFile.file());
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
