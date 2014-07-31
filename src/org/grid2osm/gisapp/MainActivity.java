@@ -47,6 +47,8 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.view.GestureDetectorCompat;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.webkit.MimeTypeMap;
@@ -100,6 +102,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	// Synchronous or asynchronous token request
 	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
 	private Boolean isSynchronous;
+
+	// Attributes for gesture recognition
+	private GestureDetectorCompat gestureDetector;
 
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
@@ -380,6 +385,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				getUsername();
 			}
 		});
+
+		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
+				this));
 	}
 
 	@Override
@@ -514,6 +522,29 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 		super.onStop();
 	}
 
+	protected void onSwipeBottom() {
+		Toast.makeText(this, "bottom", Toast.LENGTH_SHORT).show();
+	}
+
+	protected void onSwipeLeft() {
+		Toast.makeText(this, "left", Toast.LENGTH_SHORT).show();
+	}
+
+	protected void onSwipeRight() {
+		Toast.makeText(this, "right", Toast.LENGTH_SHORT).show();
+	}
+
+	protected void onSwipeTop() {
+		Toast.makeText(this, "top", Toast.LENGTH_SHORT).show();
+
+	}
+
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		this.gestureDetector.onTouchEvent(event);
+		return super.onTouchEvent(event);
+	}
+
 	/**
 	 * Starts an activity in Google Play Services so the user can pick an
 	 * account
@@ -546,8 +577,9 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				@Override
 				public void failure(RetrofitError error) {
 					if (error == null || error.getResponse() == null) {
-						Toast.makeText(MainActivity.this, R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
-						.show();
+						Toast.makeText(MainActivity.this,
+								R.string.problem_no_server_connection,
+								Toast.LENGTH_SHORT).show();
 					} else if (error.getResponse().getStatus() == HttpStatus.SC_UNAUTHORIZED) {
 						isSynchronous = true;
 						getUsername();
