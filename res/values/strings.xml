@@ -5,9 +5,7 @@
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
     <string name="logoutIn">Logout/-in</string>
-    <string name="sendData">Send data</string>
     <string name="settings">Settings</string>
-    <string name="takePhoto">Take photo</string>
     
     <string name="gps_message">GisApp needs access to your location information. Activate GPS, please.</string>
     <string name="gps_title">GPS not enabled</string>

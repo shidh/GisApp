@@ -355,29 +355,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				.setEndpoint(REST_SERVER).build();
 		restClientInterface = restAdapter.create(RestClientInterface.class);
 
-		// Button for sending the POI data and photos
-		Button button = (Button) findViewById(R.id.sendData);
-		button.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				sendData();
-			}
-		});
-
-		// Button for taking photos via intent
-		button = (Button) findViewById(R.id.takePhoto);
-		button.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (photoFiles == null) {
-					photoFiles = new ArrayList<TypedFile>();
-				}
-				takePhoto();
-			}
-		});
-
 		// Account chooser button
-		button = (Button) findViewById(R.id.logoutIn);
+		Button button = (Button) findViewById(R.id.logoutIn);
 		button.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -527,7 +506,10 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	protected void onSwipeLeft() {
-		Toast.makeText(this, "left", Toast.LENGTH_SHORT).show();
+		if (photoFiles == null) {
+			photoFiles = new ArrayList<TypedFile>();
+		}
+		takePhoto();
 	}
 
 	protected void onSwipeRight() {
@@ -535,8 +517,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 	}
 
 	protected void onSwipeTop() {
-		Toast.makeText(this, "top", Toast.LENGTH_SHORT).show();
-
+		sendData();
 	}
 
 	@Override
