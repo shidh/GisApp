@@ -19,6 +19,10 @@ public class GestureListener extends SimpleOnGestureListener {
 		return true;
 	}
 
+	/**
+	 * @author Mirek Rusin
+	 * @link http://stackoverflow.com/a/12938787
+	 */
 	@Override
 	public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
 			float velocityY) {
