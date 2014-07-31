@@ -545,11 +545,13 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 
 				@Override
 				public void failure(RetrofitError error) {
-					if (error.getResponse().getStatus() == HttpStatus.SC_UNAUTHORIZED) {
+					if (error == null || error.getResponse() == null) {
+						Toast.makeText(MainActivity.this, R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
+						.show();
+					} else if (error.getResponse().getStatus() == HttpStatus.SC_UNAUTHORIZED) {
 						isSynchronous = true;
 						getUsername();
 						sendData();
-					} else {
 					}
 				}
 

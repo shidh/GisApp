@@ -22,7 +22,8 @@
     <string name="problem_no_account">You need to pick an account.</string>
     <string name="problem_no_gps">No GPS available.</string>
     <string name="problem_no_localization">Starting localization failed.</string>
-    <string name="problem_no_play">Google Play services are mandatory. The app closes, because it is missing.</string>
     <string name="problem_no_net">No network connection available.</string>
+    <string name="problem_no_play">Google Play services are mandatory. The app closes, because it is missing.</string>
+    <string name="problem_no_server_connection">The backend server could not be contacted.</string>
 
 </resources>
