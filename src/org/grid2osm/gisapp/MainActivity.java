@@ -46,16 +46,16 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.GestureDetectorCompat;
+import android.support.v7.app.ActionBarActivity;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.webkit.MimeTypeMap;
-import android.widget.Button;
 import android.widget.Toast;
 
-public class MainActivity extends FragmentActivity implements LocationListener,
+public class MainActivity extends ActionBarActivity implements LocationListener,
 		GetTokenTask.GetTokenTaskInterface,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
@@ -355,18 +355,33 @@ public class MainActivity extends FragmentActivity implements LocationListener,
 				.setEndpoint(REST_SERVER).build();
 		restClientInterface = restAdapter.create(RestClientInterface.class);
 
-		// Account chooser button
-		Button button = (Button) findViewById(R.id.logoutIn);
-		button.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				gMail = null;
-				getUsername();
-			}
-		});
-
 		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
 				this));
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.main, menu);
+		return super.onCreateOptionsMenu(menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		/*
+		 * Handle action bar item clicks here. The action bar will automatically
+		 * handle clicks on the Home/Up button, so long as you specify a parent
+		 * activity in AndroidManifest.xml.
+		 */
+		switch (item.getItemId()) {
+		case R.id.changeAccount:
+			gMail = null;
+			getUsername();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
 	}
 
 	@Override

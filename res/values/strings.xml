@@ -4,7 +4,7 @@
     <string name="app_name">GisApp</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
-    <string name="logoutIn">Logout/-in</string>
+    <string name="changeAccount">Change Account</string>
     <string name="settings">Settings</string>
     
     <string name="gps_message">GisApp needs access to your location information. Activate GPS, please.</string>
