@@ -5,15 +5,14 @@
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
     <string name="changeAccount">Change Account</string>
+    <string name="imageView">Image View</string>
     <string name="settings">Settings</string>
-    
     <string name="gps_message">GisApp needs access to your location information. Activate GPS, please.</string>
     <string name="gps_title">GPS not enabled</string>
     <string name="net_message">GisApp needs access to the internet. Activate mobile network or Wifi, please.</string>
     <string name="net_title">Network not enabled</string>
     <string name="play_message">GisApp needs the Google Play Services to localize the user. The app will be closing now.</string>
     <string name="play_title">Google Play Services missing</string>
-    
     <string name="problem_add_photo_to_list_and_gallery">Problem adding taken photo to the queue. Retake the photo, please.</string>
     <string name="problem_create_file">Problem creating photo file. Retake the photo, please.</string>
     <string name="problem_get_token">An unknown error occurred while trying to get Google\'s authentication token.</string>

@@ -36,6 +36,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
@@ -52,11 +53,13 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.View;
 import android.webkit.MimeTypeMap;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-public class MainActivity extends ActionBarActivity implements LocationListener,
-		GetTokenTask.GetTokenTaskInterface,
+public class MainActivity extends ActionBarActivity implements
+		LocationListener, GetTokenTask.GetTokenTaskInterface,
 		GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
@@ -106,6 +109,13 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 	// Attributes for gesture recognition
 	private GestureDetectorCompat gestureDetector;
 
+	// Attributes for the imageView
+	private ImageView imageView;
+	private TypedFile imageViewFile;
+
+	// The view where all GUI items are placed on.
+	private View rootView;
+
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
 		Intent mediaScanIntent = new Intent(
@@ -123,7 +133,8 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 		if (extension != null) {
 			MimeTypeMap mime = MimeTypeMap.getSingleton();
 			mimeType = mime.getMimeTypeFromExtension(extension);
-			photoFiles.add(new TypedFile(mimeType, photoFile));
+			imageViewFile = new TypedFile(mimeType, photoFile);
+			photoFiles.add(imageViewFile);
 
 			// Add the photo to the gallery
 			addPhotoToGallery();
@@ -355,8 +366,15 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 				.setEndpoint(REST_SERVER).build();
 		restClientInterface = restAdapter.create(RestClientInterface.class);
 
+		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
 				this));
+
+		// Initialize the imageView
+		imageView = (ImageView) findViewById(R.id.imageView);
+
+		// Initialize the root view
+		rootView = findViewById(android.R.id.content);
 	}
 
 	@Override
@@ -365,23 +383,6 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.main, menu);
 		return super.onCreateOptionsMenu(menu);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		/*
-		 * Handle action bar item clicks here. The action bar will automatically
-		 * handle clicks on the Home/Up button, so long as you specify a parent
-		 * activity in AndroidManifest.xml.
-		 */
-		switch (item.getItemId()) {
-		case R.id.changeAccount:
-			gMail = null;
-			getUsername();
-			return true;
-		default:
-			return super.onOptionsItemSelected(item);
-		}
 	}
 
 	@Override
@@ -441,6 +442,23 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 	}
 
 	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		/*
+		 * Handle action bar item clicks here. The action bar will automatically
+		 * handle clicks on the Home/Up button, so long as you specify a parent
+		 * activity in AndroidManifest.xml.
+		 */
+		switch (item.getItemId()) {
+		case R.id.changeAccount:
+			gMail = null;
+			getUsername();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
+	}
+
+	@Override
 	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
 		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
 				.show();
@@ -495,6 +513,8 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 			if (!locationClient.isConnected()) {
 				locationClient.connect();
 			}
+
+			setupImageView(false);
 		}
 	}
 
@@ -528,7 +548,7 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 	}
 
 	protected void onSwipeRight() {
-		Toast.makeText(this, "right", Toast.LENGTH_SHORT).show();
+		setupImageView(true);
 	}
 
 	protected void onSwipeTop() {
@@ -588,8 +608,12 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 
 					/*
 					 * The poi data and photos were sent successfully.
-					 * Therefore, we create a new photo list.
+					 * Therefore, we clear the imageView, delete the current
+					 * imageView file and create a new photo list.
 					 */
+					imageView.setImageDrawable(null);
+					rootView.setBackgroundColor(Color.WHITE);
+					imageViewFile = null;
 					photoFiles = new ArrayList<TypedFile>();
 				}
 			};
@@ -617,6 +641,25 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 				}
 			}
 			restClientInterface.createPoi(body, callback);
+		}
+	}
+
+	// Place a photo in the imageView if available
+	private void setupImageView(boolean choosePreviousPhoto) {
+		if (photoFiles != null && !photoFiles.isEmpty()) {
+			int newIndex;
+			if (choosePreviousPhoto && imageViewFile != null
+					&& photoFiles.indexOf(imageViewFile) > 0) {
+				newIndex = photoFiles.indexOf(imageViewFile) - 1;
+			} else {
+				newIndex = photoFiles.size() - 1;
+			}
+			imageViewFile = photoFiles.get(newIndex);
+			Uri photoUri = Uri.fromFile(imageViewFile.file());
+			imageView.setImageURI(photoUri);
+			rootView.setBackgroundColor(Color.BLACK);
+		} else {
+			rootView.setBackgroundColor(Color.WHITE);
 		}
 	}
 
