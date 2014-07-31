@@ -537,7 +537,24 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	protected void onSwipeBottom() {
-		Toast.makeText(this, "bottom", Toast.LENGTH_SHORT).show();
+		if (photoFiles != null && !photoFiles.isEmpty()) {
+			if (photoFiles.size() == 1) {
+				clearImageView();
+			} else {
+				TypedFile tempImageViewFile = imageViewFile;
+				setupImageView(true);
+				if (tempImageViewFile != null) {
+					photoFiles.remove(tempImageViewFile);
+				}
+			}
+		}
+	}
+
+	private void clearImageView() {
+		imageView.setImageDrawable(null);
+		rootView.setBackgroundColor(Color.WHITE);
+		imageViewFile = null;
+		photoFiles = new ArrayList<TypedFile>();
 	}
 
 	protected void onSwipeLeft() {
@@ -611,10 +628,7 @@ public class MainActivity extends ActionBarActivity implements
 					 * Therefore, we clear the imageView, delete the current
 					 * imageView file and create a new photo list.
 					 */
-					imageView.setImageDrawable(null);
-					rootView.setBackgroundColor(Color.WHITE);
-					imageViewFile = null;
-					photoFiles = new ArrayList<TypedFile>();
+					clearImageView();
 				}
 			};
 
