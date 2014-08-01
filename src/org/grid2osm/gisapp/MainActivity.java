@@ -56,6 +56,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -93,6 +94,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
 	private String gToken;
 	private RestClientInterface restClientInterface;
+	private ProgressBar progressBar;
 
 	// List holding the photos temporarily
 	private ArrayList<TypedFile> photoFiles;
@@ -381,6 +383,7 @@ public class MainActivity extends ActionBarActivity implements
 		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
 				.setEndpoint(REST_SERVER).build();
 		restClientInterface = restAdapter.create(RestClientInterface.class);
+		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
@@ -582,6 +585,7 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	protected void onSwipeTop() {
+		progressBar.setVisibility(View.VISIBLE);
 		sendData();
 	}
 
@@ -623,6 +627,7 @@ public class MainActivity extends ActionBarActivity implements
 				@Override
 				public void failure(RetrofitError error) {
 					if (error == null || error.getResponse() == null) {
+						progressBar.setVisibility(View.GONE);
 						Toast.makeText(MainActivity.this,
 								R.string.problem_no_server_connection,
 								Toast.LENGTH_SHORT).show();
@@ -641,6 +646,7 @@ public class MainActivity extends ActionBarActivity implements
 					 * Therefore, we clear the imageView, delete the current
 					 * imageView file and create a new photo list.
 					 */
+					progressBar.setVisibility(View.GONE);
 					clearImageView();
 				}
 			};
