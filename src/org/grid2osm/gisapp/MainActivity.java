@@ -111,6 +111,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Attributes for gesture recognition
 	private GestureDetectorCompat gestureDetector;
+	private boolean gesturesEnabled;
 
 	// Attributes for the imageView
 	private ImageView imageView;
@@ -388,6 +389,7 @@ public class MainActivity extends ActionBarActivity implements
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
 				this));
+		gesturesEnabled = true;
 
 		// Initialize the subViews
 		imageView = (ImageView) findViewById(R.id.imageView);
@@ -560,33 +562,42 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	protected void onSwipeBottom() {
-		if (photoFiles != null && !photoFiles.isEmpty()) {
-			if (photoFiles.size() == 1) {
-				clearImageView();
-			} else {
-				TypedFile tempImageViewFile = imageViewFile;
-				setupImageView(true);
-				if (tempImageViewFile != null) {
-					photoFiles.remove(tempImageViewFile);
+		if (gesturesEnabled) {
+			if (photoFiles != null && !photoFiles.isEmpty()) {
+				if (photoFiles.size() == 1) {
+					clearImageView();
+				} else {
+					TypedFile tempImageViewFile = imageViewFile;
+					setupImageView(true);
+					if (tempImageViewFile != null) {
+						photoFiles.remove(tempImageViewFile);
+					}
 				}
 			}
 		}
 	}
 
 	protected void onSwipeLeft() {
-		if (photoFiles == null) {
-			photoFiles = new ArrayList<TypedFile>();
+		if (gesturesEnabled) {
+			if (photoFiles == null) {
+				photoFiles = new ArrayList<TypedFile>();
+			}
+			takePhoto();
 		}
-		takePhoto();
 	}
 
 	protected void onSwipeRight() {
-		setupImageView(true);
+		if (gesturesEnabled) {
+			setupImageView(true);
+		}
 	}
 
 	protected void onSwipeTop() {
-		progressBar.setVisibility(View.VISIBLE);
-		sendData();
+		if (gesturesEnabled) {
+			gesturesEnabled = false;
+			progressBar.setVisibility(View.VISIBLE);
+			sendData();
+		}
 	}
 
 	@Override
@@ -628,6 +639,7 @@ public class MainActivity extends ActionBarActivity implements
 				public void failure(RetrofitError error) {
 					if (error == null || error.getResponse() == null) {
 						progressBar.setVisibility(View.GONE);
+						gesturesEnabled = true;
 						Toast.makeText(MainActivity.this,
 								R.string.problem_no_server_connection,
 								Toast.LENGTH_SHORT).show();
@@ -647,6 +659,7 @@ public class MainActivity extends ActionBarActivity implements
 					 * imageView file and create a new photo list.
 					 */
 					progressBar.setVisibility(View.GONE);
+					gesturesEnabled = true;
 					clearImageView();
 				}
 			};
