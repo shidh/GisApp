@@ -96,14 +96,17 @@ public class MainActivity extends ActionBarActivity implements
 	long accumulatedTransferSize;
 	long totalTransferSize;
 
-	// List holding the photos temporarily
+	// List holding the photos temporarily for sending them later on
 	private ArrayList<File> photoFiles;
-
-	// Users's Google mail address
-	private String gMail;
 
 	// The photo file where the camera stores the taken photo temporarily
 	private File photoFile;
+
+	// Current photo on the imageView
+	private File imageViewFile;
+
+	// Users's Google mail address
+	private String gMail;
 
 	// Synchronous or asynchronous token request
 	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
@@ -115,7 +118,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Attributes for the imageView
 	private ImageView imageView;
-	private File imageViewFile;
 	private TextView cameraTextView;
 	private TextView deleteTextView;
 	private TextView previewTextView;
