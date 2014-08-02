@@ -15,9 +15,6 @@ import retrofit.RestAdapter;
 import retrofit.RetrofitError;
 import retrofit.client.OkClient;
 import retrofit.client.Response;
-import retrofit.mime.MultipartTypedOutput;
-import retrofit.mime.TypedFile;
-import retrofit.mime.TypedString;
 
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
@@ -66,7 +63,7 @@ public class MainActivity extends ActionBarActivity implements
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		NetSettingsDialog.NetSettingsListener,
-		PlayServicesDialog.PlayServicesListener {
+		PlayServicesDialog.PlayServicesListener, TransferProgressListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
@@ -95,9 +92,11 @@ public class MainActivity extends ActionBarActivity implements
 	private String gToken;
 	private RestClientInterface restClientInterface;
 	private ProgressBar progressBar;
+	long accumulatedTransferSize;
+	long totalTransferSize;
 
 	// List holding the photos temporarily
-	private ArrayList<TypedFile> photoFiles;
+	private ArrayList<File> photoFiles;
 
 	// Users's Google mail address
 	private String gMail;
@@ -115,7 +114,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Attributes for the imageView
 	private ImageView imageView;
-	private TypedFile imageViewFile;
+	private File imageViewFile;
 	private TextView cameraTextView;
 	private TextView deleteTextView;
 	private TextView previewTextView;
@@ -135,22 +134,11 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
-		String photoFileUri = Uri.fromFile(photoFile).toString();
-		String mimeType = null;
-		String extension = MimeTypeMap.getFileExtensionFromUrl(photoFileUri);
-		if (extension != null) {
-			MimeTypeMap mime = MimeTypeMap.getSingleton();
-			mimeType = mime.getMimeTypeFromExtension(extension);
-			imageViewFile = new TypedFile(mimeType, photoFile);
-			photoFiles.add(imageViewFile);
+		imageViewFile = photoFile;
+		photoFiles.add(photoFile);
 
-			// Add the photo to the gallery
-			addPhotoToGallery();
-		} else {
-			Toast.makeText(this,
-					R.string.problem_add_photo_to_list_and_gallery,
-					Toast.LENGTH_LONG).show();
-		}
+		// Add the photo to the gallery
+		addPhotoToGallery();
 	}
 
 	private void clearImageView() {
@@ -161,7 +149,7 @@ public class MainActivity extends ActionBarActivity implements
 		sendTextView.setVisibility(View.VISIBLE);
 		rootView.setBackgroundColor(Color.WHITE);
 		imageViewFile = null;
-		photoFiles = new ArrayList<TypedFile>();
+		photoFiles = new ArrayList<File>();
 	}
 
 	// Create a file for saving the photo
@@ -567,7 +555,7 @@ public class MainActivity extends ActionBarActivity implements
 				if (photoFiles.size() == 1) {
 					clearImageView();
 				} else {
-					TypedFile tempImageViewFile = imageViewFile;
+					File tempImageViewFile = imageViewFile;
 					setupImageView(true);
 					if (tempImageViewFile != null) {
 						photoFiles.remove(tempImageViewFile);
@@ -580,7 +568,7 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onSwipeLeft() {
 		if (gesturesEnabled) {
 			if (photoFiles == null) {
-				photoFiles = new ArrayList<TypedFile>();
+				photoFiles = new ArrayList<File>();
 			}
 			takePhoto();
 		}
@@ -595,6 +583,8 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onSwipeTop() {
 		if (gesturesEnabled) {
 			gesturesEnabled = false;
+			accumulatedTransferSize = 0;
+			progressBar.setProgress((int) accumulatedTransferSize);
 			progressBar.setVisibility(View.VISIBLE);
 			sendData();
 		}
@@ -664,29 +654,53 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			};
 
-			MultipartTypedOutput body = new MultipartTypedOutput();
-			body.addPart("accuracy",
-					new TypedString(String.valueOf(location.getAccuracy())));
-			body.addPart("altitude",
-					new TypedString(String.valueOf(location.getAltitude())));
-			body.addPart("bearing",
-					new TypedString(String.valueOf(location.getBearing())));
-			body.addPart("latitude",
-					new TypedString(String.valueOf(location.getLatitude())));
-			body.addPart("longitude",
-					new TypedString(String.valueOf(location.getLongitude())));
-			body.addPart("provider", new TypedString(location.getProvider()));
-			body.addPart("time",
-					new TypedString(String.valueOf(location.getTime())));
-			body.addPart("token", new TypedString(gToken));
+			TransferProgressTypedString accuracy = new TransferProgressTypedString(
+					String.valueOf(location.getAccuracy()), this);
+			TransferProgressTypedString altitude = new TransferProgressTypedString(
+					String.valueOf(location.getAltitude()), this);
+			TransferProgressTypedString bearing = new TransferProgressTypedString(
+					String.valueOf(location.getBearing()), this);
+			TransferProgressTypedString latitude = new TransferProgressTypedString(
+					String.valueOf(location.getLatitude()), this);
+			TransferProgressTypedString longitude = new TransferProgressTypedString(
+					String.valueOf(location.getLongitude()), this);
+			TransferProgressTypedString provider = new TransferProgressTypedString(
+					location.getProvider(), this);
+			TransferProgressTypedString time = new TransferProgressTypedString(
+					String.valueOf(location.getTime()), this);
+			TransferProgressTypedString token = new TransferProgressTypedString(
+					gToken, this);
+
+			TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput(
+					this);
+			data.addPart("accuracy", accuracy);
+			data.addPart("altitude", altitude);
+			data.addPart("bearing", bearing);
+			data.addPart("latitude", latitude);
+			data.addPart("longitude", longitude);
+			data.addPart("provider", provider);
+			data.addPart("time", time);
+			data.addPart("token", token);
+
 			if (photoFiles != null && !photoFiles.isEmpty()) {
 				int index = 0;
-				for (TypedFile photoFile : photoFiles) {
-					body.addPart("photo" + index, photoFile);
-					index++;
+				for (File photoFile : photoFiles) {
+					String photoFileUri = Uri.fromFile(photoFile).toString();
+					String mimeType = null;
+					String extension = MimeTypeMap
+							.getFileExtensionFromUrl(photoFileUri);
+					if (extension != null) {
+						MimeTypeMap mime = MimeTypeMap.getSingleton();
+						mimeType = mime.getMimeTypeFromExtension(extension);
+						TransferProgressTypedFile file = new TransferProgressTypedFile(
+								mimeType, photoFile, this);
+						data.addPart("photo" + index, file);
+						index++;
+					}
 				}
 			}
-			restClientInterface.createPoi(body, callback);
+			totalTransferSize = data.length();
+			restClientInterface.createPoi(data, callback);
 		}
 	}
 
@@ -705,7 +719,7 @@ public class MainActivity extends ActionBarActivity implements
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(imageViewFile.file());
+			Uri photoUri = Uri.fromFile(imageViewFile);
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
 		} else {
@@ -753,5 +767,12 @@ public class MainActivity extends ActionBarActivity implements
 				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
 		}
+	}
+
+	@Override
+	public void transferred(long additionalTransferSize) {
+		accumulatedTransferSize += additionalTransferSize;
+		progressBar
+				.setProgress((int) (accumulatedTransferSize * 100 / totalTransferSize));
 	}
 }

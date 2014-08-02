@@ -9,7 +9,7 @@
     <string name="delete">② Delete</string>
     <string name="imageView">Image View</string>
     <string name="preview">② Preview</string>
-    <string name="send">④ Send</string>
+    <string name="send">③ Send</string>
     <string name="settings">Settings</string>
     <string name="gps_message">GisApp needs access to your location information. Activate GPS, please.</string>
     <string name="gps_title">GPS not enabled</string>
