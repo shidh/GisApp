@@ -63,7 +63,8 @@ public class MainActivity extends ActionBarActivity implements
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		NetSettingsDialog.NetSettingsListener,
-		PlayServicesDialog.PlayServicesListener, TransferProgressListener {
+		PlayServicesDialog.PlayServicesListener,
+		SwipeGesture.SwipeGestureListener, TransferProgressListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
@@ -375,8 +376,8 @@ public class MainActivity extends ActionBarActivity implements
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
 		// Enable gesture recognition
-		gestureDetector = new GestureDetectorCompat(this, new GestureListener(
-				this));
+		gestureDetector = new GestureDetectorCompat(this,
+				new SwipeGesture(this));
 		gesturesEnabled = true;
 
 		// Initialize the subViews
@@ -549,7 +550,8 @@ public class MainActivity extends ActionBarActivity implements
 		super.onStop();
 	}
 
-	protected void onSwipeBottom() {
+	@Override
+	public void onSwipeBottom() {
 		if (gesturesEnabled) {
 			if (photoFiles != null && !photoFiles.isEmpty()) {
 				if (photoFiles.size() == 1) {
@@ -565,7 +567,8 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	protected void onSwipeLeft() {
+	@Override
+	public void onSwipeLeft() {
 		if (gesturesEnabled) {
 			if (photoFiles == null) {
 				photoFiles = new ArrayList<File>();
@@ -574,13 +577,15 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	protected void onSwipeRight() {
+	@Override
+	public void onSwipeRight() {
 		if (gesturesEnabled) {
 			setupImageView(true);
 		}
 	}
 
-	protected void onSwipeTop() {
+	@Override
+	public void onSwipeTop() {
 		if (gesturesEnabled) {
 			gesturesEnabled = false;
 			accumulatedTransferSize = 0;

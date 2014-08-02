@@ -120,6 +120,7 @@ public final class TransferProgressMultipartTypedOutput implements TypedOutput {
 			throw new RuntimeException("Unable to write multipart header", ex);
 		}
 	}
+
 	private final List<MimePart> mimeParts = new LinkedList<MimePart>();
 	private final byte[] footer;
 	private final String boundary;

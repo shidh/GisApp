@@ -3,15 +3,25 @@ package org.grid2osm.gisapp;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
 
-public class GestureListener extends SimpleOnGestureListener {
+public class SwipeGesture extends SimpleOnGestureListener {
+
+	public interface SwipeGestureListener {
+		void onSwipeBottom();
+
+		void onSwipeLeft();
+
+		void onSwipeRight();
+
+		void onSwipeTop();
+	}
 
 	// Attributes for gesture recognition
 	private static final int SWIPE_THRESHOLD = 100;
 	private static final int SWIPE_VELOCITY_THRESHOLD = 100;
-	private MainActivity mActivity;
+	private final SwipeGestureListener listener;
 
-	public GestureListener(MainActivity activity) {
-		this.mActivity = activity;
+	public SwipeGesture(SwipeGestureListener listener) {
+		this.listener = listener;
 	}
 
 	@Override
@@ -32,18 +42,18 @@ public class GestureListener extends SimpleOnGestureListener {
 			if (Math.abs(diffX) > SWIPE_THRESHOLD
 					&& Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
 				if (diffX > 0) {
-					this.mActivity.onSwipeRight();
+					this.listener.onSwipeRight();
 				} else {
-					this.mActivity.onSwipeLeft();
+					this.listener.onSwipeLeft();
 				}
 			}
 		} else {
 			if (Math.abs(diffY) > SWIPE_THRESHOLD
 					&& Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
 				if (diffY > 0) {
-					this.mActivity.onSwipeBottom();
+					this.listener.onSwipeBottom();
 				} else {
-					this.mActivity.onSwipeTop();
+					this.listener.onSwipeTop();
 				}
 			}
 		}
