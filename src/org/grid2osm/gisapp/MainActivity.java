@@ -193,8 +193,9 @@ public class MainActivity extends ActionBarActivity implements
 			if (isSynchronous != null && isSynchronous) {
 				isSynchronous = false;
 				try {
-					new GetTokenTask(this, gMail, SCOPE).execute().get(
-							TIME_4_TOKEN_SYNC_REQUEST, TimeUnit.MILLISECONDS);
+					getTokenTask = new GetTokenTask(this, gMail, SCOPE);
+					getTokenTask.execute().get(TIME_4_TOKEN_SYNC_REQUEST,
+							TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e) {
 					Toast.makeText(this, R.string.problem_get_token,
 							Toast.LENGTH_LONG).show();
@@ -206,7 +207,8 @@ public class MainActivity extends ActionBarActivity implements
 							Toast.LENGTH_LONG).show();
 				}
 			} else {
-				new GetTokenTask(this, gMail, SCOPE).execute();
+				getTokenTask = new GetTokenTask(this, gMail, SCOPE);
+				getTokenTask.execute();
 			}
 		}
 	}
