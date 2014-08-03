@@ -16,14 +16,9 @@ public class RetainedFragment extends Fragment {
 	 * look at MainActivity to read the object's description. If you want to
 	 * retain simple attributes, use the SharedPreferences.
 	 */
-	private GetTokenTask getTokenTask;
 	private File imageViewFile;
 	private File photoFile;
 	private ArrayList<File> photoFiles;
-
-	public GetTokenTask getGetTokenTask() {
-		return getTokenTask;
-	}
 
 	public File getImageViewFile() {
 		return imageViewFile;
@@ -45,10 +40,6 @@ public class RetainedFragment extends Fragment {
 		setRetainInstance(true);
 	}
 
-	public void setGetTokenTask(GetTokenTask getTokenTask) {
-		this.getTokenTask = getTokenTask;
-	}
-
 	public void setImageViewFile(File imageViewFile) {
 		this.imageViewFile = imageViewFile;
 	}
@@ -60,4 +51,5 @@ public class RetainedFragment extends Fragment {
 	public void setPhotoFiles(ArrayList<File> photoFiles) {
 		this.photoFiles = photoFiles;
 	}
+
 }

@@ -115,7 +115,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Synchronous or asynchronous token request
 	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
-	private GetTokenTask getTokenTask;
 	private Boolean isSynchronous;
 
 	// Attributes for gesture recognition
@@ -193,9 +192,8 @@ public class MainActivity extends ActionBarActivity implements
 			if (isSynchronous != null && isSynchronous) {
 				isSynchronous = false;
 				try {
-					getTokenTask = new GetTokenTask(this, gMail, SCOPE);
-					getTokenTask.execute().get(TIME_4_TOKEN_SYNC_REQUEST,
-							TimeUnit.MILLISECONDS);
+					new GetTokenTask(this, gMail, SCOPE).execute().get(
+							TIME_4_TOKEN_SYNC_REQUEST, TimeUnit.MILLISECONDS);
 				} catch (InterruptedException e) {
 					Toast.makeText(this, R.string.problem_get_token,
 							Toast.LENGTH_LONG).show();
@@ -207,8 +205,7 @@ public class MainActivity extends ActionBarActivity implements
 							Toast.LENGTH_LONG).show();
 				}
 			} else {
-				getTokenTask = new GetTokenTask(this, gMail, SCOPE);
-				getTokenTask.execute();
+				new GetTokenTask(this, gMail, SCOPE).execute();
 			}
 		}
 	}
@@ -703,7 +700,6 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
-		getTokenTask = retainedFragment.getGetTokenTask();
 		photoFiles = retainedFragment.getPhotoFiles();
 		photoFile = retainedFragment.getPhotoFile();
 		imageViewFile = retainedFragment.getImageViewFile();
@@ -715,7 +711,6 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
-		retainedFragment.setGetTokenTask(getTokenTask);
 		retainedFragment.setPhotoFiles(photoFiles);
 		retainedFragment.setPhotoFile(photoFile);
 		retainedFragment.setImageViewFile(imageViewFile);
