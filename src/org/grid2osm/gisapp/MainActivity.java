@@ -68,9 +68,13 @@ public class MainActivity extends ActionBarActivity implements
 		SwipeGesture.SwipeGestureListener, TransferProgressListener {
 
 	// Attributes for persistent storage
+	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
+	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
+	private static final String STORAGE_ISSYNCHRONOUS = "org.grid2osm.gisapp.isSynchronous";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
+	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
 	private Editor storageEditor;
 	private SharedPreferences storagePrefs;
 
@@ -94,8 +98,8 @@ public class MainActivity extends ActionBarActivity implements
 	private String gToken;
 	private RestClientInterface restClientInterface;
 	private ProgressBar progressBar;
-	long accumulatedTransferSize;
-	long totalTransferSize;
+	Long accumulatedTransferSize;
+	Long totalTransferSize;
 
 	// List holding the photos temporarily for sending them later on
 	private ArrayList<File> photoFiles;
@@ -115,7 +119,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Attributes for gesture recognition
 	private GestureDetectorCompat gestureDetector;
-	private boolean gesturesEnabled;
+	private Boolean gesturesEnabled;
 
 	// Attributes for the imageView
 	private ImageView imageView;
@@ -428,10 +432,27 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Store the data in the fragment
 		saveRetainedObjects();
-		
+
 		// Store primitive data
-		storageEditor.putString(STORAGE_GMAIL, gMail);
-		storageEditor.putString(STORAGE_GTOKEN, gToken);
+		if (accumulatedTransferSize != null) {
+			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
+					accumulatedTransferSize);
+		}
+		if (gesturesEnabled != null) {
+			storageEditor.putBoolean(STORAGE_GESTURESENABLED, gesturesEnabled);
+		}
+		if (gMail != null) {
+			storageEditor.putString(STORAGE_GMAIL, gMail);
+		}
+		if (gToken != null) {
+			storageEditor.putString(STORAGE_GTOKEN, gToken);
+		}
+		if (isSynchronous != null) {
+			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
+		}
+		if (totalTransferSize != null) {
+			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
+		}
 		storageEditor.commit();
 	}
 
@@ -543,13 +564,31 @@ public class MainActivity extends ActionBarActivity implements
 		 */
 		else {
 
-			// Restore gMail and gToken from persistent storage
-			if (storagePrefs.contains(STORAGE_GMAIL) && gMail == null) {
+			// Restore simple attributes from persistent storage
+			if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
+				accumulatedTransferSize = storagePrefs.getLong(
+						STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
+			}
+			if (storagePrefs.contains(STORAGE_GESTURESENABLED)) {
+				gesturesEnabled = storagePrefs.getBoolean(
+						STORAGE_GESTURESENABLED, true);
+			}
+			if (storagePrefs.contains(STORAGE_GMAIL)) {
 				gMail = storagePrefs.getString(STORAGE_GMAIL, null);
 			}
-			if (storagePrefs.contains(STORAGE_GTOKEN) && gToken == null) {
+			if (storagePrefs.contains(STORAGE_GTOKEN)) {
 				gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
 			}
+			if (storagePrefs.contains(STORAGE_ISSYNCHRONOUS)) {
+				isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
+						false);
+			}
+			if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
+				totalTransferSize = storagePrefs.getLong(
+						STORAGE_TOTALTRANSFERSIZE, 0L);
+			}
+
+			// Ask for user's mail address and/or token if not available
 			if (gMail == null || gToken == null) {
 				getUsername();
 			}
@@ -622,8 +661,8 @@ public class MainActivity extends ActionBarActivity implements
 	public void onSwipeTop() {
 		if (gesturesEnabled) {
 			gesturesEnabled = false;
-			accumulatedTransferSize = 0;
-			progressBar.setProgress((int) accumulatedTransferSize);
+			accumulatedTransferSize = 0L;
+			progressBar.setProgress((int) (long) accumulatedTransferSize);
 			progressBar.setVisibility(View.VISIBLE);
 			sendData();
 		}
