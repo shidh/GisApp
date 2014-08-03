@@ -115,6 +115,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Synchronous or asynchronous token request
 	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
+	private GetTokenTask getTokenTask;
 	private Boolean isSynchronous;
 
 	// Attributes for gesture recognition
@@ -700,6 +701,7 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
+		getTokenTask = retainedFragment.getGetTokenTask();
 		photoFiles = retainedFragment.getPhotoFiles();
 		photoFile = retainedFragment.getPhotoFile();
 		imageViewFile = retainedFragment.getImageViewFile();
@@ -711,6 +713,7 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
+		retainedFragment.setGetTokenTask(getTokenTask);
 		retainedFragment.setPhotoFiles(photoFiles);
 		retainedFragment.setPhotoFile(photoFile);
 		retainedFragment.setImageViewFile(imageViewFile);
