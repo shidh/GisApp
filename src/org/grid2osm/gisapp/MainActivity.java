@@ -29,6 +29,7 @@ import com.squareup.okhttp.OkHttpClient;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -125,6 +126,9 @@ public class MainActivity extends ActionBarActivity implements
 
 	// The view where all GUI items are placed on.
 	private View rootView;
+
+	// Fragment used to retain complex objects
+	private RetainedFragment retainedFragment;
 
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
@@ -248,6 +252,22 @@ public class MainActivity extends ActionBarActivity implements
 		});
 	}
 
+	private void initRetainedFragment() {
+
+		// Find the retained fragment on activity restarts
+		FragmentManager fragmentManager = getFragmentManager();
+		retainedFragment = (RetainedFragment) fragmentManager
+				.findFragmentByTag("data");
+
+		// Create the fragment and data the first time
+		if (retainedFragment == null) {
+			// add the fragment
+			retainedFragment = new RetainedFragment();
+			fragmentManager.beginTransaction().add(retainedFragment, "data")
+					.commit();
+		}
+	}
+
 	// Checks whether the device currently has a network connection
 	private boolean netIsEnabled() {
 		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -277,8 +297,6 @@ public class MainActivity extends ActionBarActivity implements
 			// Receiving a result from the AccountPicker
 			if (resultCode == RESULT_OK) {
 				gMail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-				storageEditor.putString(STORAGE_GMAIL, gMail);
-				storageEditor.commit();
 
 				// With the account name acquired, go get the auth token
 				getUsername();
@@ -345,6 +363,9 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		// Restore complex objects
+		restoreRetainedObjects();
+
 		// Create a new global location parameters object
 		locationRequest = LocationRequest.create();
 
@@ -402,6 +423,19 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+
+		// Store the data in the fragment
+		saveRetainedObjects();
+		
+		// Store primitive data
+		storageEditor.putString(STORAGE_GMAIL, gMail);
+		storageEditor.putString(STORAGE_GTOKEN, gToken);
+		storageEditor.commit();
+	}
+
+	@Override
 	public void onDisconnected() {
 
 	}
@@ -409,8 +443,6 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	public void onGetTokenTaskFinished(String token) {
 		gToken = token;
-		storageEditor.putString(STORAGE_GTOKEN, gToken);
-		storageEditor.commit();
 	}
 
 	@Override
@@ -512,10 +544,10 @@ public class MainActivity extends ActionBarActivity implements
 		else {
 
 			// Restore gMail and gToken from persistent storage
-			if (storagePrefs.contains(STORAGE_GMAIL)) {
+			if (storagePrefs.contains(STORAGE_GMAIL) && gMail == null) {
 				gMail = storagePrefs.getString(STORAGE_GMAIL, null);
 			}
-			if (storagePrefs.contains(STORAGE_GTOKEN)) {
+			if (storagePrefs.contains(STORAGE_GTOKEN) && gToken == null) {
 				gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
 			}
 			if (gMail == null || gToken == null) {
@@ -621,6 +653,28 @@ public class MainActivity extends ActionBarActivity implements
 		} else {
 			return false;
 		}
+	}
+
+	private void restoreRetainedObjects() {
+
+		if (retainedFragment == null) {
+			initRetainedFragment();
+		}
+
+		photoFiles = retainedFragment.getPhotoFiles();
+		photoFile = retainedFragment.getPhotoFile();
+		imageViewFile = retainedFragment.getImageViewFile();
+	}
+
+	private void saveRetainedObjects() {
+
+		if (retainedFragment == null) {
+			initRetainedFragment();
+		}
+
+		retainedFragment.setPhotoFiles(photoFiles);
+		retainedFragment.setPhotoFile(photoFile);
+		retainedFragment.setImageViewFile(imageViewFile);
 	}
 
 	// Send the data to the backend server
@@ -767,7 +821,7 @@ public class MainActivity extends ActionBarActivity implements
 			// Continue only if the file was successfully created
 			if (photoFile != null) {
 
-				// set the image file name
+				// Set the image file name
 				takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT,
 						Uri.fromFile(photoFile));
 
