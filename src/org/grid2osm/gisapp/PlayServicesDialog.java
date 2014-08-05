@@ -1,7 +1,6 @@
 package org.grid2osm.gisapp;
 
 import de.greenrobot.event.EventBus;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -23,7 +22,8 @@ public class PlayServicesDialog extends DialogFragment {
 							public void onClick(DialogInterface dialog, int id) {
 								// Send the negative button event back to the
 								// host activity
-								EventBus.getDefault().post(new PlayServicesDialogNegativeClickEvent());
+								EventBus.getDefault()
+										.post(new PlayServicesDialogNegativeClickEvent());
 							}
 						});
 		// Create the AlertDialog object and return it

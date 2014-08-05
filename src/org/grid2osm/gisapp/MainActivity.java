@@ -46,7 +46,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.support.v4.app.DialogFragment;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -62,8 +61,7 @@ import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
-		GooglePlayServicesClient.OnConnectionFailedListener,
-		GpsSettingsDialog.GpsSettingsListener {
+		GooglePlayServicesClient.OnConnectionFailedListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
@@ -471,6 +469,26 @@ public class MainActivity extends ActionBarActivity implements
 		gToken = event.gToken;
 	}
 
+	public void onEventMainThread(GpsSettingsDialogNegativeClickEvent event) {
+		// User touched the dialog's negative button
+		if (!gpsIsEnabled()) {
+			Toast.makeText(this, R.string.problem_no_gps, Toast.LENGTH_SHORT)
+					.show();
+			finish();
+		}
+	}
+
+	/*
+	 * The dialog fragment receives a reference to this Activity through the
+	 * Fragment.onAttach() callback, which it uses to call the following methods
+	 * defined by the NoticeDialogFragment.NoticeDialogListener interface
+	 */
+	public void onEventMainThread(GpsSettingsDialogPositiveClickEvent event) {
+		// User touched the dialog's positive button
+		Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+		startActivityForResult(intent, INTENT_ENABLE_GPS);
+	}
+
 	public void onEventMainThread(NetSettingsDialogNegativeClickEvent event) {
 		// User touched the dialog's negative button
 		if (!netIsEnabled()) {
@@ -484,6 +502,12 @@ public class MainActivity extends ActionBarActivity implements
 		// User touched the dialog's positive button
 		Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
 		startActivityForResult(intent, INTENT_ENABLE_NET);
+	}
+
+	public void onEventMainThread(PlayServicesDialogNegativeClickEvent event) {
+		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
+				.show();
+		finish();
 	}
 
 	public void onEventMainThread(SwipeBottomEvent event) {
@@ -534,28 +558,6 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	@Override
-	public void onGpsSettingsDialogNegativeClick(DialogFragment dialog) {
-		// User touched the dialog's negative button
-		if (!gpsIsEnabled()) {
-			Toast.makeText(this, R.string.problem_no_gps, Toast.LENGTH_SHORT)
-					.show();
-			finish();
-		}
-	}
-
-	/*
-	 * The dialog fragment receives a reference to this Activity through the
-	 * Fragment.onAttach() callback, which it uses to call the following methods
-	 * defined by the NoticeDialogFragment.NoticeDialogListener interface
-	 */
-	@Override
-	public void onGpsSettingsDialogPositiveClick(DialogFragment dialog) {
-		// User touched the dialog's positive button
-		Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-		startActivityForResult(intent, INTENT_ENABLE_GPS);
-	}
-
-	@Override
 	public void onLocationChanged(Location location) {
 
 	}
@@ -581,12 +583,6 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onPause() {
 		EventBus.getDefault().unregister(this);
 		super.onPause();
-	}
-
-	public void onEventMainThread(PlayServicesDialogNegativeClickEvent event) {
-		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
-				.show();
-		finish();
 	}
 
 	@Override
