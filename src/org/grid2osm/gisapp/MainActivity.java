@@ -64,7 +64,6 @@ public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
-		NetSettingsDialog.NetSettingsListener,
 		PlayServicesDialog.PlayServicesListener {
 
 	// Attributes for persistent storage
@@ -473,6 +472,21 @@ public class MainActivity extends ActionBarActivity implements
 		gToken = event.gToken;
 	}
 
+	public void onEventMainThread(NetSettingsDialogNegativeClickEvent event) {
+		// User touched the dialog's negative button
+		if (!netIsEnabled()) {
+			Toast.makeText(this, R.string.problem_no_net, Toast.LENGTH_SHORT)
+					.show();
+			finish();
+		}
+	}
+
+	public void onEventMainThread(NetSettingsDialogPositiveClickEvent event) {
+		// User touched the dialog's positive button
+		Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+		startActivityForResult(intent, INTENT_ENABLE_NET);
+	}
+
 	public void onEventMainThread(SwipeBottomEvent event) {
 		if (gesturesEnabled) {
 			if (photoFiles != null && !photoFiles.isEmpty()) {
@@ -545,23 +559,6 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	public void onLocationChanged(Location location) {
 
-	}
-
-	@Override
-	public void onNetSettingsDialogNegativeClick(DialogFragment dialog) {
-		// User touched the dialog's negative button
-		if (!netIsEnabled()) {
-			Toast.makeText(this, R.string.problem_no_net, Toast.LENGTH_SHORT)
-					.show();
-			finish();
-		}
-	}
-
-	@Override
-	public void onNetSettingsDialogPositiveClick(DialogFragment dialog) {
-		// User touched the dialog's positive button
-		Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
-		startActivityForResult(intent, INTENT_ENABLE_NET);
 	}
 
 	@Override
