@@ -65,8 +65,7 @@ public class MainActivity extends ActionBarActivity implements
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		NetSettingsDialog.NetSettingsListener,
-		PlayServicesDialog.PlayServicesListener,
-		SwipeGesture.SwipeGestureListener {
+		PlayServicesDialog.PlayServicesListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
@@ -413,8 +412,7 @@ public class MainActivity extends ActionBarActivity implements
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
 		// Enable gesture recognition
-		gestureDetector = new GestureDetectorCompat(this,
-				new SwipeGesture(this));
+		gestureDetector = new GestureDetectorCompat(this, new SwipeGesture());
 		gesturesEnabled = true;
 
 		// Initialize the subViews
@@ -473,6 +471,47 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(GetTokenFinishedEvent event) {
 		gToken = event.gToken;
+	}
+
+	public void onEventMainThread(SwipeBottomEvent event) {
+		if (gesturesEnabled) {
+			if (photoFiles != null && !photoFiles.isEmpty()) {
+				if (photoFiles.size() == 1) {
+					clearImageView();
+				} else {
+					File tempImageViewFile = imageViewFile;
+					setupImageView(true);
+					if (tempImageViewFile != null) {
+						photoFiles.remove(tempImageViewFile);
+					}
+				}
+			}
+		}
+	}
+
+	public void onEventMainThread(SwipeLeftEvent event) {
+		if (gesturesEnabled) {
+			if (photoFiles == null) {
+				photoFiles = new ArrayList<File>();
+			}
+			takePhoto();
+		}
+	}
+
+	public void onEventMainThread(SwipeRightEvent event) {
+		if (gesturesEnabled) {
+			setupImageView(true);
+		}
+	}
+
+	public void onEventMainThread(SwipeTopEvent event) {
+		if (gesturesEnabled) {
+			gesturesEnabled = false;
+			accumulatedTransferSize = 0L;
+			progressBar.setProgress((int) (long) accumulatedTransferSize);
+			progressBar.setVisibility(View.VISIBLE);
+			sendData();
+		}
 	}
 
 	public void onEventMainThread(TransferProgressChangedEvent event) {
@@ -654,51 +693,6 @@ public class MainActivity extends ActionBarActivity implements
 		locationClient.disconnect();
 
 		super.onStop();
-	}
-
-	@Override
-	public void onSwipeBottom() {
-		if (gesturesEnabled) {
-			if (photoFiles != null && !photoFiles.isEmpty()) {
-				if (photoFiles.size() == 1) {
-					clearImageView();
-				} else {
-					File tempImageViewFile = imageViewFile;
-					setupImageView(true);
-					if (tempImageViewFile != null) {
-						photoFiles.remove(tempImageViewFile);
-					}
-				}
-			}
-		}
-	}
-
-	@Override
-	public void onSwipeLeft() {
-		if (gesturesEnabled) {
-			if (photoFiles == null) {
-				photoFiles = new ArrayList<File>();
-			}
-			takePhoto();
-		}
-	}
-
-	@Override
-	public void onSwipeRight() {
-		if (gesturesEnabled) {
-			setupImageView(true);
-		}
-	}
-
-	@Override
-	public void onSwipeTop() {
-		if (gesturesEnabled) {
-			gesturesEnabled = false;
-			accumulatedTransferSize = 0L;
-			progressBar.setProgress((int) (long) accumulatedTransferSize);
-			progressBar.setVisibility(View.VISIBLE);
-			sendData();
-		}
 	}
 
 	@Override

@@ -1,28 +1,14 @@
 package org.grid2osm.gisapp;
 
+import de.greenrobot.event.EventBus;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
 
 public class SwipeGesture extends SimpleOnGestureListener {
 
-	public interface SwipeGestureListener {
-		void onSwipeBottom();
-
-		void onSwipeLeft();
-
-		void onSwipeRight();
-
-		void onSwipeTop();
-	}
-
 	// Attributes for gesture recognition
 	private static final int SWIPE_THRESHOLD = 100;
 	private static final int SWIPE_VELOCITY_THRESHOLD = 100;
-	private final SwipeGestureListener listener;
-
-	public SwipeGesture(SwipeGestureListener listener) {
-		this.listener = listener;
-	}
 
 	@Override
 	public boolean onDown(MotionEvent e) {
@@ -42,18 +28,18 @@ public class SwipeGesture extends SimpleOnGestureListener {
 			if (Math.abs(diffX) > SWIPE_THRESHOLD
 					&& Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
 				if (diffX > 0) {
-					this.listener.onSwipeRight();
+					EventBus.getDefault().post(new SwipeRightEvent());
 				} else {
-					this.listener.onSwipeLeft();
+					EventBus.getDefault().post(new SwipeLeftEvent());
 				}
 			}
 		} else {
 			if (Math.abs(diffY) > SWIPE_THRESHOLD
 					&& Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
 				if (diffY > 0) {
-					this.listener.onSwipeBottom();
+					EventBus.getDefault().post(new SwipeBottomEvent());
 				} else {
-					this.listener.onSwipeTop();
+					EventBus.getDefault().post(new SwipeTopEvent());
 				}
 			}
 		}
