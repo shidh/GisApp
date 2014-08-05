@@ -6,18 +6,14 @@ import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 
+import de.greenrobot.event.EventBus;
+
 import android.os.AsyncTask;
 
 public class GetTokenTask extends AsyncTask<Void, Void, String> {
 
-	// Used to store the token in the main thread
-	public interface GetTokenTaskInterface {
-		public void onGetTokenTaskFinished(String token);
-	}
-
 	MainActivity mActivity;
 	String mScope;
-
 	String mEmail;
 
 	GetTokenTask(MainActivity activity, String name, String scope) {
@@ -64,6 +60,6 @@ public class GetTokenTask extends AsyncTask<Void, Void, String> {
 
 	@Override
 	protected void onPostExecute(String result) {
-		mActivity.onGetTokenTaskFinished(result);
+		EventBus.getDefault().post(new GetTokenFinishedEvent(result));
 	}
 }

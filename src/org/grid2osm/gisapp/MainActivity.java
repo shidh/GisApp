@@ -61,8 +61,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements
-		LocationListener, GetTokenTask.GetTokenTaskInterface,
-		GooglePlayServicesClient.ConnectionCallbacks,
+		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
 		GpsSettingsDialog.GpsSettingsListener,
 		NetSettingsDialog.NetSettingsListener,
@@ -472,15 +471,14 @@ public class MainActivity extends ActionBarActivity implements
 
 	}
 
+	public void onEventMainThread(GetTokenFinishedEvent event) {
+		gToken = event.gToken;
+	}
+
 	public void onEventMainThread(TransferProgressChangedEvent event) {
 		accumulatedTransferSize += event.additionalTransferSize;
 		progressBar
 				.setProgress((int) (accumulatedTransferSize * 100 / totalTransferSize));
-	}
-
-	@Override
-	public void onGetTokenTaskFinished(String token) {
-		gToken = token;
 	}
 
 	@Override
