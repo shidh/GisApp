@@ -27,6 +27,8 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.squareup.okhttp.OkHttpClient;
 
+import de.greenrobot.event.EventBus;
+
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.app.FragmentManager;
@@ -65,7 +67,7 @@ public class MainActivity extends ActionBarActivity implements
 		GpsSettingsDialog.GpsSettingsListener,
 		NetSettingsDialog.NetSettingsListener,
 		PlayServicesDialog.PlayServicesListener,
-		SwipeGesture.SwipeGestureListener, TransferProgressListener {
+		SwipeGesture.SwipeGestureListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
@@ -133,6 +135,12 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Fragment used to retain complex objects
 	private RetainedFragment retainedFragment;
+
+	/*
+	 * If the activity was registered in onCreate(), don't register in
+	 * onResume();
+	 */
+	private boolean skipRegisterOnNextResume;
 
 	// Make the photo accessible in the gallery
 	private void addPhotoToGallery() {
@@ -367,6 +375,9 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		EventBus.getDefault().register(this);
+		skipRegisterOnNextResume = true;
+
 		// Restore complex objects
 		restoreRetainedObjects();
 
@@ -461,6 +472,12 @@ public class MainActivity extends ActionBarActivity implements
 
 	}
 
+	public void onEventMainThread(TransferProgressChangedEvent event) {
+		accumulatedTransferSize += event.additionalTransferSize;
+		progressBar
+				.setProgress((int) (accumulatedTransferSize * 100 / totalTransferSize));
+	}
+
 	@Override
 	public void onGetTokenTaskFinished(String token) {
 		gToken = token;
@@ -528,10 +545,28 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	@Override
+	protected void onPause() {
+		EventBus.getDefault().unregister(this);
+		super.onPause();
+	}
+
+	@Override
 	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
 		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
 				.show();
 		finish();
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+
+		if (skipRegisterOnNextResume) {
+			// registered in onCreate, skip registration in this run
+			skipRegisterOnNextResume = false;
+		} else {
+			EventBus.getDefault().register(this);
+		}
 	}
 
 	// Called when the Activity is restarted, even before it becomes visible.
@@ -755,24 +790,23 @@ public class MainActivity extends ActionBarActivity implements
 			};
 
 			TransferProgressTypedString accuracy = new TransferProgressTypedString(
-					String.valueOf(location.getAccuracy()), this);
+					String.valueOf(location.getAccuracy()));
 			TransferProgressTypedString altitude = new TransferProgressTypedString(
-					String.valueOf(location.getAltitude()), this);
+					String.valueOf(location.getAltitude()));
 			TransferProgressTypedString bearing = new TransferProgressTypedString(
-					String.valueOf(location.getBearing()), this);
+					String.valueOf(location.getBearing()));
 			TransferProgressTypedString latitude = new TransferProgressTypedString(
-					String.valueOf(location.getLatitude()), this);
+					String.valueOf(location.getLatitude()));
 			TransferProgressTypedString longitude = new TransferProgressTypedString(
-					String.valueOf(location.getLongitude()), this);
+					String.valueOf(location.getLongitude()));
 			TransferProgressTypedString provider = new TransferProgressTypedString(
-					location.getProvider(), this);
+					location.getProvider());
 			TransferProgressTypedString time = new TransferProgressTypedString(
-					String.valueOf(location.getTime()), this);
+					String.valueOf(location.getTime()));
 			TransferProgressTypedString token = new TransferProgressTypedString(
-					gToken, this);
+					gToken);
 
-			TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput(
-					this);
+			TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
 			data.addPart("accuracy", accuracy);
 			data.addPart("altitude", altitude);
 			data.addPart("bearing", bearing);
@@ -793,7 +827,7 @@ public class MainActivity extends ActionBarActivity implements
 						MimeTypeMap mime = MimeTypeMap.getSingleton();
 						mimeType = mime.getMimeTypeFromExtension(extension);
 						TransferProgressTypedFile file = new TransferProgressTypedFile(
-								mimeType, photoFile, this);
+								mimeType, photoFile);
 						data.addPart("photo" + index, file);
 						index++;
 					}
@@ -867,12 +901,5 @@ public class MainActivity extends ActionBarActivity implements
 				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
 		}
-	}
-
-	@Override
-	public void transferred(long additionalTransferSize) {
-		accumulatedTransferSize += additionalTransferSize;
-		progressBar
-				.setProgress((int) (accumulatedTransferSize * 100 / totalTransferSize));
 	}
 }

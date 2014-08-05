@@ -12,8 +12,7 @@ public class TransferProgressTypedString extends TransferProgressTypedByteArray 
 		}
 	}
 
-	public TransferProgressTypedString(String string,
-			TransferProgressListener listener) {
-		super("text/plain; charset=UTF-8", convertToBytes(string), listener);
+	public TransferProgressTypedString(String string) {
+		super("text/plain; charset=UTF-8", convertToBytes(string));
 	}
 }

@@ -5,17 +5,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import de.greenrobot.event.EventBus;
+
 import retrofit.mime.TypedFile;
 
 public class TransferProgressTypedFile extends TypedFile {
 
 	private static final int BUFFER_SIZE = 4096;
-	private final TransferProgressListener listener;
 
-	public TransferProgressTypedFile(String mimeType, File file,
-			TransferProgressListener listener) {
+	public TransferProgressTypedFile(String mimeType, File file) {
 		super(mimeType, file);
-		this.listener = listener;
 	}
 
 	@Override
@@ -25,7 +24,8 @@ public class TransferProgressTypedFile extends TypedFile {
 		try {
 			int read;
 			while ((read = in.read(buffer)) != -1) {
-				listener.transferred(read);
+				EventBus.getDefault().post(
+						new TransferProgressChangedEvent(read));
 				out.write(buffer, 0, read);
 			}
 		} finally {

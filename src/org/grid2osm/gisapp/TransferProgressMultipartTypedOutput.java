@@ -24,6 +24,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import de.greenrobot.event.EventBus;
+
 import retrofit.mime.TypedOutput;
 
 public final class TransferProgressMultipartTypedOutput implements TypedOutput {
@@ -70,12 +72,13 @@ public final class TransferProgressMultipartTypedOutput implements TypedOutput {
 			body.writeTo(out);
 		}
 
-		public void writeTo(OutputStream out, TransferProgressListener listener)
-				throws IOException {
+		public void writeToWithEvent(OutputStream out) throws IOException {
 			build();
-			listener.transferred(partBoundary.length);
+			EventBus.getDefault().post(
+					new TransferProgressChangedEvent(partBoundary.length));
 			out.write(partBoundary);
-			listener.transferred(partHeader.length);
+			EventBus.getDefault().post(
+					new TransferProgressChangedEvent(partHeader.length));
 			out.write(partHeader);
 			body.writeTo(out);
 		}
@@ -125,21 +128,16 @@ public final class TransferProgressMultipartTypedOutput implements TypedOutput {
 	private final byte[] footer;
 	private final String boundary;
 
-	private final TransferProgressListener listener;
-
 	private long length;
 
-	TransferProgressMultipartTypedOutput(String boundary,
-			TransferProgressListener listener) {
-		this.boundary = boundary;
-		this.listener = listener;
-		footer = buildBoundary(boundary, false, true);
-		length = footer.length;
+	public TransferProgressMultipartTypedOutput() {
+		this(UUID.randomUUID().toString());
 	}
 
-	public TransferProgressMultipartTypedOutput(
-			TransferProgressListener listener) {
-		this(UUID.randomUUID().toString(), listener);
+	TransferProgressMultipartTypedOutput(String boundary) {
+		this.boundary = boundary;
+		footer = buildBoundary(boundary, false, true);
+		length = footer.length;
 	}
 
 	public void addPart(String name, TypedOutput body) {
@@ -193,9 +191,10 @@ public final class TransferProgressMultipartTypedOutput implements TypedOutput {
 	@Override
 	public void writeTo(OutputStream out) throws IOException {
 		for (MimePart part : mimeParts) {
-			part.writeTo(out, listener);
+			part.writeToWithEvent(out);
 		}
-		listener.transferred(footer.length);
+		EventBus.getDefault().post(
+				new TransferProgressChangedEvent(footer.length));
 		out.write(footer);
 	}
 }
