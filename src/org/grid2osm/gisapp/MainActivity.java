@@ -63,8 +63,7 @@ import android.widget.Toast;
 public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener,
-		GpsSettingsDialog.GpsSettingsListener,
-		PlayServicesDialog.PlayServicesListener {
+		GpsSettingsDialog.GpsSettingsListener {
 
 	// Attributes for persistent storage
 	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
@@ -584,8 +583,7 @@ public class MainActivity extends ActionBarActivity implements
 		super.onPause();
 	}
 
-	@Override
-	public void onPlayServicesDialogNegativeClick(DialogFragment dialog) {
+	public void onEventMainThread(PlayServicesDialogNegativeClickEvent event) {
 		Toast.makeText(this, R.string.problem_no_play, Toast.LENGTH_SHORT)
 				.show();
 		finish();
