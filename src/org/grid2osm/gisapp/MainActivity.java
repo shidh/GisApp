@@ -136,22 +136,19 @@ public class MainActivity extends ActionBarActivity implements
 	 */
 	private boolean skipRegisterOnNextResume;
 
-	// Make the photo accessible in the gallery
-	private void addPhotoToGallery() {
+	// Add file to photoFiles to be able to send them later on
+	private void addPhotoToListAndGallery() {
+		imageViewFile = photoFile;
+		
+		// Add the photo to the list
+		photoFiles.add(photoFile);
+
+		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 		Uri contentUri = Uri.fromFile(photoFile);
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
-	}
-
-	// Add file to photoFiles to be able to send them later on
-	private void addPhotoToListAndGallery() {
-		imageViewFile = photoFile;
-		photoFiles.add(photoFile);
-
-		// Add the photo to the gallery
-		addPhotoToGallery();
 	}
 
 	private void clearImageView() {
@@ -256,6 +253,21 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			}
 		});
+	}
+
+	private void initPrimitiveStorage() {
+
+		if (storagePrefs == null) {
+			// Open Shared Preferences
+			storagePrefs = getSharedPreferences(STORAGE_PREFS,
+					Context.MODE_PRIVATE);
+
+			// Get an editor
+			storageEditor = storagePrefs.edit();
+		} else if (storageEditor == null) {
+			// Get an editor
+			storageEditor = storagePrefs.edit();
+		}
 	}
 
 	private void initRetainedFragment() {
@@ -375,6 +387,9 @@ public class MainActivity extends ActionBarActivity implements
 		// Restore complex objects
 		restoreRetainedObjects();
 
+		// Restore primitive attributes
+		restorePrimitiveAttributes();
+
 		// Create a new global location parameters object
 		locationRequest = LocationRequest.create();
 
@@ -392,12 +407,6 @@ public class MainActivity extends ActionBarActivity implements
 		 * callbacks
 		 */
 		locationClient = new LocationClient(this, this, this);
-
-		// Open Shared Preferences
-		storagePrefs = getSharedPreferences(STORAGE_PREFS, Context.MODE_PRIVATE);
-
-		// Get an editor
-		storageEditor = storagePrefs.edit();
 
 		// Initialize the REST adapter
 		OkHttpClient okHttpClient = new OkHttpClient();
@@ -608,30 +617,6 @@ public class MainActivity extends ActionBarActivity implements
 		 */
 		else {
 
-			// Restore simple attributes from persistent storage
-			if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
-				accumulatedTransferSize = storagePrefs.getLong(
-						STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
-			}
-			if (storagePrefs.contains(STORAGE_GESTURESENABLED)) {
-				gesturesEnabled = storagePrefs.getBoolean(
-						STORAGE_GESTURESENABLED, true);
-			}
-			if (storagePrefs.contains(STORAGE_GMAIL)) {
-				gMail = storagePrefs.getString(STORAGE_GMAIL, null);
-			}
-			if (storagePrefs.contains(STORAGE_GTOKEN)) {
-				gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
-			}
-			if (storagePrefs.contains(STORAGE_ISSYNCHRONOUS)) {
-				isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
-						false);
-			}
-			if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
-				totalTransferSize = storagePrefs.getLong(
-						STORAGE_TOTALTRANSFERSIZE, 0L);
-			}
-
 			// Ask for user's mail address and/or token if not available
 			if (gMail == null || gToken == null) {
 				getUsername();
@@ -693,6 +678,36 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
+	private void restorePrimitiveAttributes() {
+
+		initPrimitiveStorage();
+		
+		// Restore simple attributes from persistent storage
+		if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
+			accumulatedTransferSize = storagePrefs.getLong(
+					STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
+		}
+		if (storagePrefs.contains(STORAGE_GESTURESENABLED)) {
+			gesturesEnabled = storagePrefs.getBoolean(STORAGE_GESTURESENABLED,
+					true);
+		}
+		if (storagePrefs.contains(STORAGE_GMAIL)) {
+			gMail = storagePrefs.getString(STORAGE_GMAIL, null);
+		}
+		if (storagePrefs.contains(STORAGE_GTOKEN)) {
+			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
+		}
+		if (storagePrefs.contains(STORAGE_ISSYNCHRONOUS)) {
+			isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
+					false);
+		}
+		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
+			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
+					0L);
+		}
+
+	}
+
 	private void restoreRetainedObjects() {
 
 		if (retainedFragment == null) {
@@ -706,6 +721,8 @@ public class MainActivity extends ActionBarActivity implements
 
 	private void savePrimitiveAttributes() {
 
+		initPrimitiveStorage();
+		
 		if (accumulatedTransferSize != null) {
 			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
 					accumulatedTransferSize);
