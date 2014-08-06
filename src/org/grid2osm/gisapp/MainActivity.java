@@ -70,6 +70,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
 	private static final String STORAGE_ISSYNCHRONOUS = "org.grid2osm.gisapp.isSynchronous";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
+	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
 	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
 	private Editor storageEditor;
 	private SharedPreferences storagePrefs;
@@ -409,6 +410,15 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		// Initialize the views
+		imageView = (ImageView) findViewById(R.id.imageView);
+		cameraTextView = (TextView) findViewById(R.id.camera);
+		deleteTextView = (TextView) findViewById(R.id.delete);
+		previewTextView = (TextView) findViewById(R.id.preview);
+		progressBar = (ProgressBar) findViewById(R.id.progressBar);
+		rootView = findViewById(android.R.id.content);
+		sendTextView = (TextView) findViewById(R.id.send);
+		
 		EventBus.getDefault().register(this);
 		skipRegisterOnNextResume = true;
 
@@ -426,21 +436,10 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Initialize the REST adapter
 		initRestClientInterface();
-		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new SwipeGesture());
 		gesturesEnabled = true;
-
-		// Initialize the subViews
-		imageView = (ImageView) findViewById(R.id.imageView);
-		cameraTextView = (TextView) findViewById(R.id.camera);
-		deleteTextView = (TextView) findViewById(R.id.delete);
-		previewTextView = (TextView) findViewById(R.id.preview);
-		sendTextView = (TextView) findViewById(R.id.send);
-
-		// Initialize the root view
-		rootView = findViewById(android.R.id.content);
 	}
 
 	@Override
@@ -597,6 +596,11 @@ public class MainActivity extends ActionBarActivity implements
 		} else {
 			EventBus.getDefault().register(this);
 		}
+		
+		// Restore the progress bar
+		if (progressBar.getVisibility() == View.VISIBLE) {
+			EventBus.getDefault().post(new TransferProgressChangedEvent(0));
+		}
 	}
 
 	// Called when the Activity is restarted, even before it becomes visible.
@@ -690,11 +694,14 @@ public class MainActivity extends ActionBarActivity implements
 			isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
 					false);
 		}
+		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
+			progressBar.setVisibility(storagePrefs.getInt(
+					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
+		}
 		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
 			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
 					0L);
 		}
-
 	}
 
 	private void restoreRetainedObjects() {
@@ -728,6 +735,8 @@ public class MainActivity extends ActionBarActivity implements
 		if (isSynchronous != null) {
 			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
 		}
+		storageEditor.putInt(STORAGE_PROGRESSBARVISIBILITY,
+				progressBar.getVisibility());
 		if (totalTransferSize != null) {
 			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
 		}
