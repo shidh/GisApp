@@ -1,5 +1,6 @@
-package org.grid2osm.gisapp;
+package org.grid2osm.gisapp.AsyncTask;
 
+import org.grid2osm.gisapp.RestClientInterface;
 import org.grid2osm.gisapp.event.SendDataTaskEvent;
 import org.grid2osm.gisapp.retrofit.TransferProgressMultipartTypedOutput;
 

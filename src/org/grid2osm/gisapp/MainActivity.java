@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.AsyncTask.GetTokenTask;
+import org.grid2osm.gisapp.AsyncTask.SendDataTask;
 import org.grid2osm.gisapp.dialog.GpsSettingsDialog;
 import org.grid2osm.gisapp.dialog.NetSettingsDialog;
 import org.grid2osm.gisapp.dialog.PlayServicesDialog;
@@ -250,7 +252,7 @@ public class MainActivity extends ActionBarActivity implements
 	 * This method is a hook for background threads and async tasks that need to
 	 * provide the user a response UI when an exception occurs.
 	 */
-	void handleException(final Exception e) {
+	public void handleException(final Exception e) {
 		/*
 		 * Because this call comes from the AsyncTask, we must ensure that the
 		 * following code instead executes on the UI thread.

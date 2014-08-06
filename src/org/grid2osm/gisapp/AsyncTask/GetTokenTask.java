@@ -1,7 +1,8 @@
-package org.grid2osm.gisapp;
+package org.grid2osm.gisapp.AsyncTask;
 
 import java.io.IOException;
 
+import org.grid2osm.gisapp.MainActivity;
 import org.grid2osm.gisapp.event.GetTokenFinishedEvent;
 
 import com.google.android.gms.auth.GoogleAuthException;
@@ -18,7 +19,7 @@ public class GetTokenTask extends AsyncTask<Void, Void, String> {
 	private String mScope;
 	private String mEmail;
 
-	GetTokenTask(MainActivity activity, String name, String scope) {
+	public GetTokenTask(MainActivity activity, String name, String scope) {
 		this.mActivity = activity;
 		this.mScope = scope;
 		this.mEmail = name;
