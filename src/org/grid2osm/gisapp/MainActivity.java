@@ -402,7 +402,7 @@ public class MainActivity extends ActionBarActivity implements
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 		rootView = findViewById(android.R.id.content);
 		sendTextView = (TextView) findViewById(R.id.send);
-		
+
 		EventBus.getDefault().register(this);
 		skipRegisterOnNextResume = true;
 
@@ -492,6 +492,32 @@ public class MainActivity extends ActionBarActivity implements
 		finish();
 	}
 
+	public void onEventMainThread(SendDataTaskEvent event) {
+		if (event.httpStatus == null) {
+			progressBar.setVisibility(View.GONE);
+			gesturesEnabled = true;
+			Toast.makeText(MainActivity.this,
+					R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
+					.show();
+		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
+			isSynchronous = true;
+			getUsername();
+			sendData();
+		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
+			/*
+			 * The poi data and photos were sent successfully. Therefore, we
+			 * clear the imageView, delete the current imageView file and create
+			 * a new photo list.
+			 */
+			progressBar.setVisibility(View.GONE);
+			gesturesEnabled = true;
+			clearImageView();
+		} else {
+			Toast.makeText(this, R.string.problem_send_data, Toast.LENGTH_LONG)
+					.show();
+		}
+	}
+
 	public void onEventMainThread(SwipeBottomEvent event) {
 		if (gesturesEnabled) {
 			if (photoFiles != null && !photoFiles.isEmpty()) {
@@ -517,38 +543,6 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	public void onEventMainThread(SendDataTaskEvent event) {
-		
-		if (event.httpStatus == null) {
-			progressBar.setVisibility(View.GONE);
-			gesturesEnabled = true;
-			Toast.makeText(MainActivity.this,
-					R.string.problem_no_server_connection,
-					Toast.LENGTH_SHORT).show();
-			
-		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
-			isSynchronous = true;
-			getUsername();
-			sendData();
-			
-		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
-
-			/*
-			 * The poi data and photos were sent successfully.
-			 * Therefore, we clear the imageView, delete the current
-			 * imageView file and create a new photo list.
-			 */
-			progressBar.setVisibility(View.GONE);
-			gesturesEnabled = true;
-			clearImageView();
-			
-		} else {
-
-			Toast.makeText(this, R.string.problem_send_data,
-					Toast.LENGTH_LONG).show();
-		}
-	}
-	
 	public void onEventMainThread(SwipeRightEvent event) {
 		if (gesturesEnabled) {
 			setupImageView(true);
@@ -609,7 +603,7 @@ public class MainActivity extends ActionBarActivity implements
 		} else {
 			EventBus.getDefault().register(this);
 		}
-		
+
 		// Restore the progress bar
 		if (progressBar.getVisibility() == View.VISIBLE) {
 			EventBus.getDefault().post(new TransferProgressChangedEvent(0));
@@ -819,7 +813,7 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			}
 			totalTransferSize = data.length();
-			
+
 			new SendDataTask().execute(data);
 		}
 	}
