@@ -94,8 +94,8 @@ public class MainActivity extends ActionBarActivity implements
 	private String gToken;
 	private RestClientInterface restClientInterface;
 	private ProgressBar progressBar;
-	Long accumulatedTransferSize;
-	Long totalTransferSize;
+	private Long accumulatedTransferSize;
+	private Long totalTransferSize;
 
 	// List holding the photos temporarily for sending them later on
 	private ArrayList<File> photoFiles;
@@ -222,7 +222,7 @@ public class MainActivity extends ActionBarActivity implements
 	 * This method is a hook for background threads and async tasks that need to
 	 * provide the user a response UI when an exception occurs.
 	 */
-	public void handleException(final Exception e) {
+	void handleException(final Exception e) {
 		/*
 		 * Because this call comes from the AsyncTask, we must ensure that the
 		 * following code instead executes on the UI thread.
@@ -438,26 +438,7 @@ public class MainActivity extends ActionBarActivity implements
 		saveRetainedObjects();
 
 		// Store primitive data
-		if (accumulatedTransferSize != null) {
-			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
-					accumulatedTransferSize);
-		}
-		if (gesturesEnabled != null) {
-			storageEditor.putBoolean(STORAGE_GESTURESENABLED, gesturesEnabled);
-		}
-		if (gMail != null) {
-			storageEditor.putString(STORAGE_GMAIL, gMail);
-		}
-		if (gToken != null) {
-			storageEditor.putString(STORAGE_GTOKEN, gToken);
-		}
-		if (isSynchronous != null) {
-			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
-		}
-		if (totalTransferSize != null) {
-			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
-		}
-		storageEditor.commit();
+		savePrimitiveAttributes();
 	}
 
 	@Override
@@ -721,6 +702,30 @@ public class MainActivity extends ActionBarActivity implements
 		photoFiles = retainedFragment.getPhotoFiles();
 		photoFile = retainedFragment.getPhotoFile();
 		imageViewFile = retainedFragment.getImageViewFile();
+	}
+
+	private void savePrimitiveAttributes() {
+
+		if (accumulatedTransferSize != null) {
+			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
+					accumulatedTransferSize);
+		}
+		if (gesturesEnabled != null) {
+			storageEditor.putBoolean(STORAGE_GESTURESENABLED, gesturesEnabled);
+		}
+		if (gMail != null) {
+			storageEditor.putString(STORAGE_GMAIL, gMail);
+		}
+		if (gToken != null) {
+			storageEditor.putString(STORAGE_GTOKEN, gToken);
+		}
+		if (isSynchronous != null) {
+			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
+		}
+		if (totalTransferSize != null) {
+			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
+		}
+		storageEditor.commit();
 	}
 
 	private void saveRetainedObjects() {

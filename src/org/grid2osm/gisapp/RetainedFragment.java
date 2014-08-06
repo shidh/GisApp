@@ -20,15 +20,15 @@ public class RetainedFragment extends Fragment {
 	private File photoFile;
 	private ArrayList<File> photoFiles;
 
-	public File getImageViewFile() {
+	File getImageViewFile() {
 		return imageViewFile;
 	}
 
-	public File getPhotoFile() {
+	File getPhotoFile() {
 		return photoFile;
 	}
 
-	public ArrayList<File> getPhotoFiles() {
+	ArrayList<File> getPhotoFiles() {
 		return photoFiles;
 	}
 
@@ -40,15 +40,15 @@ public class RetainedFragment extends Fragment {
 		setRetainInstance(true);
 	}
 
-	public void setImageViewFile(File imageViewFile) {
+	void setImageViewFile(File imageViewFile) {
 		this.imageViewFile = imageViewFile;
 	}
 
-	public void setPhotoFile(File photoFile) {
+	void setPhotoFile(File photoFile) {
 		this.photoFile = photoFile;
 	}
 
-	public void setPhotoFiles(ArrayList<File> photoFiles) {
+	void setPhotoFiles(ArrayList<File> photoFiles) {
 		this.photoFiles = photoFiles;
 	}
 

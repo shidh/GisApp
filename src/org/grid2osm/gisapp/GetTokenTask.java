@@ -12,9 +12,9 @@ import android.os.AsyncTask;
 
 public class GetTokenTask extends AsyncTask<Void, Void, String> {
 
-	MainActivity mActivity;
-	String mScope;
-	String mEmail;
+	private MainActivity mActivity;
+	private String mScope;
+	private String mEmail;
 
 	GetTokenTask(MainActivity activity, String name, String scope) {
 		this.mActivity = activity;
@@ -44,7 +44,7 @@ public class GetTokenTask extends AsyncTask<Void, Void, String> {
 	 * Gets an authentication token from Google and handles any
 	 * GoogleAuthException that may occur.
 	 */
-	protected String fetchToken() throws IOException {
+	private String fetchToken() throws IOException {
 		try {
 			return GoogleAuthUtil.getToken(mActivity, mEmail, mScope);
 		} catch (UserRecoverableAuthException userRecoverableException) {
