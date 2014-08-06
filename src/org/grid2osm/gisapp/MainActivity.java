@@ -520,6 +520,8 @@ public class MainActivity extends ActionBarActivity implements
 					R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
 					.show();
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
+			accumulatedTransferSize = 0L;
+			progressBar.setProgress((int) (long) accumulatedTransferSize);
 			isSynchronous = true;
 			getUsername();
 			sendData();
