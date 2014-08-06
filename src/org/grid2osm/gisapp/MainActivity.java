@@ -10,11 +10,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.http.HttpStatus;
-import retrofit.Callback;
-import retrofit.RestAdapter;
-import retrofit.RetrofitError;
-import retrofit.client.OkClient;
-import retrofit.client.Response;
 
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
@@ -25,7 +20,6 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
-import com.squareup.okhttp.OkHttpClient;
 
 import de.greenrobot.event.EventBus;
 
@@ -89,10 +83,8 @@ public class MainActivity extends ActionBarActivity implements
 	private LocationClient locationClient;
 
 	// Attributes used by the REST client
-	private static final String REST_SERVER = "http://www.play.localdomain";
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
 	private String gToken;
-	private RestClientInterface restClientInterface;
 	private ProgressBar progressBar;
 	private Long accumulatedTransferSize;
 	private Long totalTransferSize;
@@ -291,14 +283,6 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	private void initRestClientInterface() {
-		OkHttpClient okHttpClient = new OkHttpClient();
-		OkClient okClient = new OkClient(okHttpClient);
-		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
-				.setEndpoint(REST_SERVER).build();
-		restClientInterface = restAdapter.create(RestClientInterface.class);
-	}
-
 	private void initRetainedFragment() {
 
 		// Find the retained fragment on activity restarts
@@ -434,9 +418,6 @@ public class MainActivity extends ActionBarActivity implements
 		 */
 		locationClient = new LocationClient(this, this, this);
 
-		// Initialize the REST adapter
-		initRestClientInterface();
-
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new SwipeGesture());
 		gesturesEnabled = true;
@@ -536,6 +517,38 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
+	public void onEventMainThread(SendDataTaskEvent event) {
+		
+		if (event.httpStatus == null) {
+			progressBar.setVisibility(View.GONE);
+			gesturesEnabled = true;
+			Toast.makeText(MainActivity.this,
+					R.string.problem_no_server_connection,
+					Toast.LENGTH_SHORT).show();
+			
+		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
+			isSynchronous = true;
+			getUsername();
+			sendData();
+			
+		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
+
+			/*
+			 * The poi data and photos were sent successfully.
+			 * Therefore, we clear the imageView, delete the current
+			 * imageView file and create a new photo list.
+			 */
+			progressBar.setVisibility(View.GONE);
+			gesturesEnabled = true;
+			clearImageView();
+			
+		} else {
+
+			Toast.makeText(this, R.string.problem_send_data,
+					Toast.LENGTH_LONG).show();
+		}
+	}
+	
 	public void onEventMainThread(SwipeRightEvent event) {
 		if (gesturesEnabled) {
 			setupImageView(true);
@@ -761,37 +774,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		if (location != null && netIsEnabled()) {
 
-			Callback<Response> callback = new Callback<Response>() {
-
-				@Override
-				public void failure(RetrofitError error) {
-					if (error == null || error.getResponse() == null) {
-						progressBar.setVisibility(View.GONE);
-						gesturesEnabled = true;
-						Toast.makeText(MainActivity.this,
-								R.string.problem_no_server_connection,
-								Toast.LENGTH_SHORT).show();
-					} else if (error.getResponse().getStatus() == HttpStatus.SC_UNAUTHORIZED) {
-						isSynchronous = true;
-						getUsername();
-						sendData();
-					}
-				}
-
-				@Override
-				public void success(Response response0, Response response1) {
-
-					/*
-					 * The poi data and photos were sent successfully.
-					 * Therefore, we clear the imageView, delete the current
-					 * imageView file and create a new photo list.
-					 */
-					progressBar.setVisibility(View.GONE);
-					gesturesEnabled = true;
-					clearImageView();
-				}
-			};
-
 			TransferProgressTypedString accuracy = new TransferProgressTypedString(
 					String.valueOf(location.getAccuracy()));
 			TransferProgressTypedString altitude = new TransferProgressTypedString(
@@ -837,7 +819,8 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			}
 			totalTransferSize = data.length();
-			restClientInterface.createPoi(data, callback);
+			
+			new SendDataTask().execute(data);
 		}
 	}
 
