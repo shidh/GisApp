@@ -86,7 +86,6 @@ public class MainActivity extends ActionBarActivity implements
 	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
 	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
-	private LocationRequest locationRequest;
 
 	// Attributes used by the REST client
 	private static final String REST_SERVER = "http://www.play.localdomain";
@@ -139,7 +138,7 @@ public class MainActivity extends ActionBarActivity implements
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 		imageViewFile = photoFile;
-		
+
 		// Add the photo to the list
 		photoFiles.add(photoFile);
 
@@ -149,6 +148,27 @@ public class MainActivity extends ActionBarActivity implements
 		Uri contentUri = Uri.fromFile(photoFile);
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
+	}
+
+	private void checkSmartphoneSettings() {
+
+		// Check for the Google play services on the device
+		if (!playIsAvailable()) {
+			PlayServicesDialog playServices = new PlayServicesDialog();
+			playServices.show(getSupportFragmentManager(), "playServices");
+		}
+
+		// Check for the availability of GPS
+		else if (!gpsIsEnabled()) {
+			GpsSettingsDialog gpsSettings = new GpsSettingsDialog();
+			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
+		}
+
+		// Check for network connectivity.
+		else if (!netIsEnabled()) {
+			NetSettingsDialog netSettings = new NetSettingsDialog();
+			netSettings.show(getSupportFragmentManager(), "netSettings");
+		}
 	}
 
 	private void clearImageView() {
@@ -268,6 +288,14 @@ public class MainActivity extends ActionBarActivity implements
 			// Get an editor
 			storageEditor = storagePrefs.edit();
 		}
+	}
+
+	private void initRestClientInterface() {
+		OkHttpClient okHttpClient = new OkHttpClient();
+		OkClient okClient = new OkClient(okHttpClient);
+		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
+				.setEndpoint(REST_SERVER).build();
+		restClientInterface = restAdapter.create(RestClientInterface.class);
 	}
 
 	private void initRetainedFragment() {
@@ -390,18 +418,6 @@ public class MainActivity extends ActionBarActivity implements
 		// Restore primitive attributes
 		restorePrimitiveAttributes();
 
-		// Create a new global location parameters object
-		locationRequest = LocationRequest.create();
-
-		// Set the update interval ceiling in milliseconds
-		locationRequest.setFastestInterval(LOCALIZATION_LOWER_LIMIT);
-
-		// Set the update interval in milliseconds
-		locationRequest.setInterval(LOCALIZATION_UPPER_LIMIT);
-
-		// Use high accuracy
-		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
 		/*
 		 * Create a new location client, using the enclosing class to handle
 		 * callbacks
@@ -409,11 +425,7 @@ public class MainActivity extends ActionBarActivity implements
 		locationClient = new LocationClient(this, this, this);
 
 		// Initialize the REST adapter
-		OkHttpClient okHttpClient = new OkHttpClient();
-		OkClient okClient = new OkClient(okHttpClient);
-		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
-				.setEndpoint(REST_SERVER).build();
-		restClientInterface = restAdapter.create(RestClientInterface.class);
+		initRestClientInterface();
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
 		// Enable gesture recognition
@@ -593,45 +605,22 @@ public class MainActivity extends ActionBarActivity implements
 
 		super.onStart();
 
-		// Check for the Google play services on the device
-		if (!playIsAvailable()) {
-			PlayServicesDialog playServices = new PlayServicesDialog();
-			playServices.show(getSupportFragmentManager(), "playServices");
-		}
+		checkSmartphoneSettings();
 
-		// Check for the availability of GPS
-		else if (!gpsIsEnabled()) {
-			GpsSettingsDialog gpsSettings = new GpsSettingsDialog();
-			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
-		}
-
-		// Check for network connectivity.
-		else if (!netIsEnabled()) {
-			NetSettingsDialog netSettings = new NetSettingsDialog();
-			netSettings.show(getSupportFragmentManager(), "netSettings");
+		// Ask for user's mail address and/or token if not available
+		if (gMail == null || gToken == null) {
+			getUsername();
 		}
 
 		/*
-		 * All requirements are met. So, restore the data of the previous
-		 * session, if available, and start localization.
+		 * Connect the client. Don't re-start any requests here; instead, wait
+		 * for onResume()
 		 */
-		else {
-
-			// Ask for user's mail address and/or token if not available
-			if (gMail == null || gToken == null) {
-				getUsername();
-			}
-
-			/*
-			 * Connect the client. Don't re-start any requests here; instead,
-			 * wait for onResume()
-			 */
-			if (!locationClient.isConnected()) {
-				locationClient.connect();
-			}
-
-			setupImageView(false);
+		if (!locationClient.isConnected()) {
+			locationClient.connect();
 		}
+
+		setupImageView(false);
 	}
 
 	/*
@@ -681,7 +670,7 @@ public class MainActivity extends ActionBarActivity implements
 	private void restorePrimitiveAttributes() {
 
 		initPrimitiveStorage();
-		
+
 		// Restore simple attributes from persistent storage
 		if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
 			accumulatedTransferSize = storagePrefs.getLong(
@@ -722,7 +711,7 @@ public class MainActivity extends ActionBarActivity implements
 	private void savePrimitiveAttributes() {
 
 		initPrimitiveStorage();
-		
+
 		if (accumulatedTransferSize != null) {
 			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
 					accumulatedTransferSize);
@@ -871,6 +860,18 @@ public class MainActivity extends ActionBarActivity implements
 	 * Services
 	 */
 	private void startPeriodicUpdates() {
+
+		// Create a new location parameters object
+		LocationRequest locationRequest = LocationRequest.create();
+
+		// Set the update interval ceiling in milliseconds
+		locationRequest.setFastestInterval(LOCALIZATION_LOWER_LIMIT);
+
+		// Set the update interval in milliseconds
+		locationRequest.setInterval(LOCALIZATION_UPPER_LIMIT);
+
+		// Use high accuracy
+		locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 		locationClient.requestLocationUpdates(locationRequest, this);
 	}
