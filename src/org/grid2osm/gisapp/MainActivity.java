@@ -22,6 +22,9 @@ import org.grid2osm.gisapp.event.SwipeLeftEvent;
 import org.grid2osm.gisapp.event.SwipeRightEvent;
 import org.grid2osm.gisapp.event.SwipeTopEvent;
 import org.grid2osm.gisapp.event.TransferProgressChangedEvent;
+import org.grid2osm.gisapp.retrofit.TransferProgressMultipartTypedOutput;
+import org.grid2osm.gisapp.retrofit.TransferProgressTypedFile;
+import org.grid2osm.gisapp.retrofit.TransferProgressTypedString;
 
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;

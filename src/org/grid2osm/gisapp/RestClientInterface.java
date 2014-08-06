@@ -1,5 +1,7 @@
 package org.grid2osm.gisapp;
 
+import org.grid2osm.gisapp.retrofit.TransferProgressMultipartTypedOutput;
+
 import retrofit.Callback;
 import retrofit.client.Response;
 import retrofit.http.Body;

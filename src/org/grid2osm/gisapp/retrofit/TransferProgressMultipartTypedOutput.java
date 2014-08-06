@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.grid2osm.gisapp;
+package org.grid2osm.gisapp.retrofit;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

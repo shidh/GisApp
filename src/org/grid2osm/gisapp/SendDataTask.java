@@ -1,6 +1,7 @@
 package org.grid2osm.gisapp;
 
 import org.grid2osm.gisapp.event.SendDataTaskEvent;
+import org.grid2osm.gisapp.retrofit.TransferProgressMultipartTypedOutput;
 
 import retrofit.Callback;
 import retrofit.RestAdapter;
