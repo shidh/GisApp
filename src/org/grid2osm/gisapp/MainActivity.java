@@ -10,6 +10,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.dialog.GpsSettingsDialog;
+import org.grid2osm.gisapp.dialog.NetSettingsDialog;
+import org.grid2osm.gisapp.dialog.PlayServicesDialog;
 import org.grid2osm.gisapp.event.GetTokenFinishedEvent;
 import org.grid2osm.gisapp.event.GpsSettingsDialogNegativeClickEvent;
 import org.grid2osm.gisapp.event.GpsSettingsDialogPositiveClickEvent;

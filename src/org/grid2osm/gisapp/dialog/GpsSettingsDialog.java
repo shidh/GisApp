@@ -1,7 +1,8 @@
-package org.grid2osm.gisapp;
+package org.grid2osm.gisapp.dialog;
 
-import org.grid2osm.gisapp.event.NetSettingsDialogNegativeClickEvent;
-import org.grid2osm.gisapp.event.NetSettingsDialogPositiveClickEvent;
+import org.grid2osm.gisapp.R;
+import org.grid2osm.gisapp.event.GpsSettingsDialogNegativeClickEvent;
+import org.grid2osm.gisapp.event.GpsSettingsDialogPositiveClickEvent;
 
 import de.greenrobot.event.EventBus;
 import android.app.AlertDialog;
@@ -10,15 +11,15 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 
-public class NetSettingsDialog extends DialogFragment {
+public class GpsSettingsDialog extends DialogFragment {
 
 	@Override
 	public Dialog onCreateDialog(Bundle savedInstanceState) {
 
 		// Build the dialog and set up the button click handlers
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-		builder.setMessage(R.string.net_message)
-				.setTitle(R.string.net_title)
+		builder.setMessage(R.string.gps_message)
+				.setTitle(R.string.gps_title)
 				.setPositiveButton(R.string.settings,
 						new DialogInterface.OnClickListener() {
 							@Override
@@ -26,7 +27,7 @@ public class NetSettingsDialog extends DialogFragment {
 								// Send the positive button event back to the
 								// host activity
 								EventBus.getDefault()
-										.post(new NetSettingsDialogPositiveClickEvent());
+										.post(new GpsSettingsDialogPositiveClickEvent());
 							}
 						})
 				.setNegativeButton(R.string.cancel,
@@ -36,7 +37,7 @@ public class NetSettingsDialog extends DialogFragment {
 								// Send the negative button event back to the
 								// host activity
 								EventBus.getDefault()
-										.post(new NetSettingsDialogNegativeClickEvent());
+										.post(new GpsSettingsDialogNegativeClickEvent());
 							}
 						});
 		// Create the AlertDialog object and return it
