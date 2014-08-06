@@ -2,6 +2,8 @@ package org.grid2osm.gisapp;
 
 import java.io.IOException;
 
+import org.grid2osm.gisapp.event.GetTokenFinishedEvent;
+
 import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.auth.UserRecoverableAuthException;

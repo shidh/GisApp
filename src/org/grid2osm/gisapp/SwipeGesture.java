@@ -1,5 +1,10 @@
 package org.grid2osm.gisapp;
 
+import org.grid2osm.gisapp.event.SwipeBottomEvent;
+import org.grid2osm.gisapp.event.SwipeLeftEvent;
+import org.grid2osm.gisapp.event.SwipeRightEvent;
+import org.grid2osm.gisapp.event.SwipeTopEvent;
+
 import de.greenrobot.event.EventBus;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;

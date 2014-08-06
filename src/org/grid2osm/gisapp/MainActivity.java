@@ -10,6 +10,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.event.GetTokenFinishedEvent;
+import org.grid2osm.gisapp.event.GpsSettingsDialogNegativeClickEvent;
+import org.grid2osm.gisapp.event.GpsSettingsDialogPositiveClickEvent;
+import org.grid2osm.gisapp.event.NetSettingsDialogNegativeClickEvent;
+import org.grid2osm.gisapp.event.NetSettingsDialogPositiveClickEvent;
+import org.grid2osm.gisapp.event.PlayServicesDialogNegativeClickEvent;
+import org.grid2osm.gisapp.event.SendDataTaskEvent;
+import org.grid2osm.gisapp.event.SwipeBottomEvent;
+import org.grid2osm.gisapp.event.SwipeLeftEvent;
+import org.grid2osm.gisapp.event.SwipeRightEvent;
+import org.grid2osm.gisapp.event.SwipeTopEvent;
+import org.grid2osm.gisapp.event.TransferProgressChangedEvent;
 
 import com.google.android.gms.auth.GooglePlayServicesAvailabilityException;
 import com.google.android.gms.auth.UserRecoverableAuthException;

@@ -24,6 +24,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import org.grid2osm.gisapp.event.TransferProgressChangedEvent;
+
 import de.greenrobot.event.EventBus;
 
 import retrofit.mime.TypedOutput;

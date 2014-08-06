@@ -1,5 +1,7 @@
 package org.grid2osm.gisapp;
 
+import org.grid2osm.gisapp.event.SendDataTaskEvent;
+
 import retrofit.Callback;
 import retrofit.RestAdapter;
 import retrofit.RetrofitError;

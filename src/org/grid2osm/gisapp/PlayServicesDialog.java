@@ -1,5 +1,7 @@
 package org.grid2osm.gisapp;
 
+import org.grid2osm.gisapp.event.PlayServicesDialogNegativeClickEvent;
+
 import de.greenrobot.event.EventBus;
 import android.app.AlertDialog;
 import android.app.Dialog;

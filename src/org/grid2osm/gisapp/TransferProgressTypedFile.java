@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.grid2osm.gisapp.event.TransferProgressChangedEvent;
+
 import de.greenrobot.event.EventBus;
 
 import retrofit.mime.TypedFile;
