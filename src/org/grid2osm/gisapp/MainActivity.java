@@ -691,7 +691,7 @@ public class MainActivity extends ActionBarActivity implements
 		startActivityForResult(intent, INTENT_PICK_ACCOUNT);
 	}
 
-	// Chech whether the Google play services are available
+	// Check whether the Google play services are available
 	private boolean playIsAvailable() {
 		if (GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
 			return true;
@@ -789,33 +789,40 @@ public class MainActivity extends ActionBarActivity implements
 		Location location = locationClient.getLastLocation();
 
 		if (location != null && netIsEnabled()) {
-
-			TransferProgressTypedString accuracy = new TransferProgressTypedString(
-					String.valueOf(location.getAccuracy()));
-			TransferProgressTypedString altitude = new TransferProgressTypedString(
-					String.valueOf(location.getAltitude()));
-			TransferProgressTypedString bearing = new TransferProgressTypedString(
-					String.valueOf(location.getBearing()));
-			TransferProgressTypedString latitude = new TransferProgressTypedString(
-					String.valueOf(location.getLatitude()));
-			TransferProgressTypedString longitude = new TransferProgressTypedString(
-					String.valueOf(location.getLongitude()));
-			TransferProgressTypedString provider = new TransferProgressTypedString(
-					location.getProvider());
-			TransferProgressTypedString time = new TransferProgressTypedString(
-					String.valueOf(location.getTime()));
-			TransferProgressTypedString token = new TransferProgressTypedString(
-					gToken);
-
 			TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
-			data.addPart("accuracy", accuracy);
-			data.addPart("altitude", altitude);
-			data.addPart("bearing", bearing);
-			data.addPart("latitude", latitude);
-			data.addPart("longitude", longitude);
-			data.addPart("provider", provider);
-			data.addPart("time", time);
-			data.addPart("token", token);
+			if (location.hasAccuracy()) {
+				data.addPart(
+						"accuracy",
+						new TransferProgressTypedString(String.valueOf(location
+								.getAccuracy())));
+			}
+			if (location.hasAltitude()) {
+				data.addPart(
+						"altitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getAltitude())));
+			}
+			if (location.hasBearing()) {
+				data.addPart(
+						"bearing",
+						new TransferProgressTypedString(String.valueOf(location
+								.getBearing())));
+			}
+			data.addPart(
+					"latitude",
+					new TransferProgressTypedString(String.valueOf(location
+							.getLatitude())));
+			data.addPart(
+					"longitude",
+					new TransferProgressTypedString(String.valueOf(location
+							.getLongitude())));
+			data.addPart("provider",
+					new TransferProgressTypedString(location.getProvider()));
+			data.addPart(
+					"time",
+					new TransferProgressTypedString(String.valueOf(location
+							.getTime())));
+			data.addPart("token", new TransferProgressTypedString(gToken));
 
 			if (photoFiles != null && !photoFiles.isEmpty()) {
 				int index = 0;
