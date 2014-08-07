@@ -60,6 +60,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -78,6 +79,7 @@ public class MainActivity extends ActionBarActivity implements
 		GooglePlayServicesClient.OnConnectionFailedListener {
 
 	// Attributes for persistent storage
+	private static final String STORAGE_ACCOUNTPICKERISOPEN = "org.grid2osm.gisapp.accountPickerIsOpen";
 	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
 	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
@@ -148,6 +150,10 @@ public class MainActivity extends ActionBarActivity implements
 	 */
 	private boolean skipRegisterOnNextResume;
 
+	// Keeps the app from opening multiple dialogs at the same time
+	private Boolean accountPickerIsOpen;
+	private ArrayList<DialogFragment> dialogs;
+
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 		imageViewFile = photoFile;
@@ -168,18 +174,21 @@ public class MainActivity extends ActionBarActivity implements
 		// Check for the Google play services on the device
 		if (!playIsAvailable()) {
 			PlayServicesDialog playServices = new PlayServicesDialog();
+			dialogs.add(playServices);
 			playServices.show(getSupportFragmentManager(), "playServices");
 		}
 
 		// Check for the availability of GPS
 		else if (!gpsIsEnabled()) {
 			GpsSettingsDialog gpsSettings = new GpsSettingsDialog();
+			dialogs.add(gpsSettings);
 			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
 		}
 
 		// Check for network connectivity.
 		else if (!netIsEnabled()) {
 			NetSettingsDialog netSettings = new NetSettingsDialog();
+			dialogs.add(netSettings);
 			netSettings.show(getSupportFragmentManager(), "netSettings");
 		}
 	}
@@ -345,6 +354,8 @@ public class MainActivity extends ActionBarActivity implements
 				finish();
 			}
 		} else if (requestCode == INTENT_PICK_ACCOUNT) {
+			accountPickerIsOpen = false;
+
 			// Receiving a result from the AccountPicker
 			if (resultCode == RESULT_OK) {
 				gMail = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
@@ -441,6 +452,9 @@ public class MainActivity extends ActionBarActivity implements
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new SwipeGesture());
 		gesturesEnabled = true;
+		
+		// Initialise the dialogs list
+		dialogs = new ArrayList<DialogFragment>();
 	}
 
 	@Override
@@ -605,6 +619,14 @@ public class MainActivity extends ActionBarActivity implements
 
 	@Override
 	protected void onPause() {
+
+		/*
+		 * Dismiss all dialogs. If the conditions are met they open again after
+		 * the app comes in the foreground.
+		 */
+		for (DialogFragment dialog : dialogs) {
+			dialog.dismiss();
+		}
 		EventBus.getDefault().unregister(this);
 		super.onPause();
 	}
@@ -674,15 +696,18 @@ public class MainActivity extends ActionBarActivity implements
 		return super.onTouchEvent(event);
 	}
 
-	/**
+	/*
 	 * Starts an activity in Google Play Services so the user can pick an
 	 * account
 	 */
 	private void pickUserAccount() {
-		String[] accountTypes = new String[] { "com.google" };
-		Intent intent = AccountPicker.newChooseAccountIntent(null, null,
-				accountTypes, false, null, null, null, null);
-		startActivityForResult(intent, INTENT_PICK_ACCOUNT);
+		if (accountPickerIsOpen == null || !accountPickerIsOpen) {
+			accountPickerIsOpen = true;
+			String[] accountTypes = new String[] { "com.google" };
+			Intent intent = AccountPicker.newChooseAccountIntent(null, null,
+					accountTypes, false, null, null, null, null);
+			startActivityForResult(intent, INTENT_PICK_ACCOUNT);
+		}
 	}
 
 	// Check whether the Google play services are available
@@ -699,6 +724,10 @@ public class MainActivity extends ActionBarActivity implements
 		initPrimitiveStorage();
 
 		// Restore simple attributes from persistent storage
+		if (storagePrefs.contains(STORAGE_ACCOUNTPICKERISOPEN)) {
+			accountPickerIsOpen = storagePrefs.getBoolean(
+					STORAGE_ACCOUNTPICKERISOPEN, false);
+		}
 		if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
 			accumulatedTransferSize = storagePrefs.getLong(
 					STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
@@ -742,6 +771,10 @@ public class MainActivity extends ActionBarActivity implements
 
 		initPrimitiveStorage();
 
+		if (accountPickerIsOpen != null) {
+			storageEditor.putBoolean(STORAGE_ACCOUNTPICKERISOPEN,
+					accountPickerIsOpen);
+		}
 		if (accumulatedTransferSize != null) {
 			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
 					accumulatedTransferSize);
@@ -865,7 +898,7 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	/**
+	/*
 	 * In response to a request to start updates, send a request to Location
 	 * Services
 	 */
@@ -886,7 +919,7 @@ public class MainActivity extends ActionBarActivity implements
 		locationClient.requestLocationUpdates(locationRequest, this);
 	}
 
-	/**
+	/*
 	 * In response to a request to stop updates, send a request to Location
 	 * Services
 	 */
