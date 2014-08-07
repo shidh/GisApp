@@ -520,8 +520,6 @@ public class MainActivity extends ActionBarActivity implements
 					R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
 					.show();
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
-			accumulatedTransferSize = 0L;
-			progressBar.setProgress((int) (long) accumulatedTransferSize);
 			isSynchronous = true;
 			getUsername();
 			sendData();
@@ -573,10 +571,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(SwipeTopEvent event) {
 		if (gesturesEnabled) {
-			gesturesEnabled = false;
-			accumulatedTransferSize = 0L;
-			progressBar.setProgress((int) (long) accumulatedTransferSize);
-			progressBar.setVisibility(View.VISIBLE);
 			sendData();
 		}
 	}
@@ -789,42 +783,40 @@ public class MainActivity extends ActionBarActivity implements
 		Location location = locationClient.getLastLocation();
 
 		if (location != null && netIsEnabled()) {
-			TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
-			if (location.hasAccuracy()) {
-				data.addPart(
-						"accuracy",
-						new TransferProgressTypedString(String.valueOf(location
-								.getAccuracy())));
-			}
-			if (location.hasAltitude()) {
-				data.addPart(
-						"altitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getAltitude())));
-			}
-			if (location.hasBearing()) {
-				data.addPart(
-						"bearing",
-						new TransferProgressTypedString(String.valueOf(location
-								.getBearing())));
-			}
-			data.addPart(
-					"latitude",
-					new TransferProgressTypedString(String.valueOf(location
-							.getLatitude())));
-			data.addPart(
-					"longitude",
-					new TransferProgressTypedString(String.valueOf(location
-							.getLongitude())));
-			data.addPart("provider",
-					new TransferProgressTypedString(location.getProvider()));
-			data.addPart(
-					"time",
-					new TransferProgressTypedString(String.valueOf(location
-							.getTime())));
-			data.addPart("token", new TransferProgressTypedString(gToken));
-
 			if (photoFiles != null && !photoFiles.isEmpty()) {
+
+				gesturesEnabled = false;
+				accumulatedTransferSize = 0L;
+				progressBar.setProgress((int) (long) accumulatedTransferSize);
+				progressBar.setVisibility(View.VISIBLE);
+
+				TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
+				if (location.hasAccuracy()) {
+					data.addPart("accuracy", new TransferProgressTypedString(
+							String.valueOf(location.getAccuracy())));
+				}
+				if (location.hasAltitude()) {
+					data.addPart("altitude", new TransferProgressTypedString(
+							String.valueOf(location.getAltitude())));
+				}
+				if (location.hasBearing()) {
+					data.addPart("bearing", new TransferProgressTypedString(
+							String.valueOf(location.getBearing())));
+				}
+				data.addPart(
+						"latitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getLatitude())));
+				data.addPart("longitude", new TransferProgressTypedString(
+						String.valueOf(location.getLongitude())));
+				data.addPart("provider", new TransferProgressTypedString(
+						location.getProvider()));
+				data.addPart(
+						"time",
+						new TransferProgressTypedString(String.valueOf(location
+								.getTime())));
+				data.addPart("token", new TransferProgressTypedString(gToken));
+
 				int index = 0;
 				for (File photoFile : photoFiles) {
 					String photoFileUri = Uri.fromFile(photoFile).toString();
@@ -840,10 +832,13 @@ public class MainActivity extends ActionBarActivity implements
 						index++;
 					}
 				}
-			}
-			totalTransferSize = data.length();
+				totalTransferSize = data.length();
 
-			new SendDataTask().execute(data);
+				new SendDataTask().execute(data);
+			} else {
+				Toast.makeText(this, R.string.problem_no_photo,
+						Toast.LENGTH_LONG).show();
+			}
 		}
 	}
 
