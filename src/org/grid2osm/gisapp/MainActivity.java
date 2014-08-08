@@ -111,14 +111,20 @@ public class MainActivity extends ActionBarActivity implements
 	private Long accumulatedTransferSize;
 	private Long totalTransferSize;
 
-	// List holding the photos temporarily for sending them later on
-	private ArrayList<File> photoFiles;
+	// List holding information on all POI that will be sent later on to the
+	// backend server
+	private ArrayList<Poi> pois;
 
-	// The photo file where the camera stores the taken photo temporarily
+	// List holding the photos of a POI temporarily for storing them later on in
+	// attribute "pois"
+	private ArrayList<Photo> poiPhotos;
+
+	// The photo file where the camera stores the taken photo temporarily to
+	// create an entry in "poiPhotos"
 	private File photoFile;
 
 	// Current photo on the imageView
-	private File imageViewFile;
+	private Photo imageViewPhoto;
 
 	// Users's Google mail address
 	private String gMail;
@@ -154,17 +160,47 @@ public class MainActivity extends ActionBarActivity implements
 	private Boolean accountPickerIsOpen;
 	private ArrayList<DialogFragment> dialogs;
 
+	/*
+	 * After the intent to take a picture finishes we need to wait for
+	 * onConnected() and get location information thereafter in order to save
+	 * the data.
+	 */
+	private Boolean takeAnotherPhoto;
+
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
-		imageViewFile = photoFile;
+
+		Location location = locationClient.getLastLocation();
+
+		Float accuracy = null;
+		if (location.hasAccuracy()) {
+			accuracy = location.getAccuracy();
+		}
+		Double altitude = null;
+		if (location.hasAltitude()) {
+			altitude = location.getAltitude();
+		}
+		Float bearing = null;
+		if (location.hasBearing()) {
+			bearing = location.getBearing();
+		}
+		double latitude = location.getLatitude();
+		double longitude = location.getLongitude();
+		String provider = location.getProvider();
+		long time = location.getTime();
+
+		Photo photo = new Photo(accuracy, altitude, bearing, latitude,
+				longitude, photoFile, provider, time);
+
+		imageViewPhoto = photo;
 
 		// Add the photo to the list
-		photoFiles.add(photoFile);
+		poiPhotos.add(photo);
 
 		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-		Uri contentUri = Uri.fromFile(photoFile);
+		Uri contentUri = Uri.fromFile(photo.photoFile);
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
 	}
@@ -200,8 +236,8 @@ public class MainActivity extends ActionBarActivity implements
 		previewTextView.setVisibility(View.VISIBLE);
 		sendTextView.setVisibility(View.VISIBLE);
 		rootView.setBackgroundColor(Color.WHITE);
-		imageViewFile = null;
-		photoFiles = new ArrayList<File>();
+		imageViewPhoto = null;
+		poiPhotos = new ArrayList<Photo>();
 	}
 
 	// Create a file for saving the photo
@@ -381,14 +417,7 @@ public class MainActivity extends ActionBarActivity implements
 			getUsername();
 		} else if (requestCode == INTENT_TAKE_PHOTO) {
 			if (resultCode == RESULT_OK) {
-				/*
-				 * Add the photo to the photo list to send it later on and add
-				 * it to the gallery
-				 */
-				addPhotoToListAndGallery();
-
-				// Photo taken and saved; allow the user to take another one
-				takePhoto();
+				takeAnotherPhoto = true;
 			} else if (resultCode == RESULT_CANCELED) {
 				// User cancelled the photo capture
 			}
@@ -405,6 +434,19 @@ public class MainActivity extends ActionBarActivity implements
 	public void onConnected(Bundle bundle) {
 
 		startPeriodicUpdates();
+
+		if (takeAnotherPhoto != null && takeAnotherPhoto) {
+			takeAnotherPhoto = false;
+
+			/*
+			 * Add the photo to the photo list to send it later on and add it to
+			 * the gallery
+			 */
+			addPhotoToListAndGallery();
+
+			// Photo taken and saved; allow the user to take another one
+			takePhoto();
+		}
 	}
 
 	/*
@@ -452,9 +494,19 @@ public class MainActivity extends ActionBarActivity implements
 		// Enable gesture recognition
 		gestureDetector = new GestureDetectorCompat(this, new SwipeGesture());
 		gesturesEnabled = true;
-		
+
 		// Initialise the dialogs list
 		dialogs = new ArrayList<DialogFragment>();
+
+		// Initialize the pois
+		if (pois == null) {
+			pois = new ArrayList<Poi>();
+		}
+
+		// Initialize the poiPhotos
+		if (poiPhotos == null) {
+			poiPhotos = new ArrayList<Photo>();
+		}
 	}
 
 	@Override
@@ -543,9 +595,14 @@ public class MainActivity extends ActionBarActivity implements
 			 * clear the imageView, delete the current imageView file and create
 			 * a new photo list.
 			 */
-			progressBar.setVisibility(View.GONE);
-			gesturesEnabled = true;
-			clearImageView();
+			pois.remove(0);
+			if (pois.isEmpty()) {
+				progressBar.setVisibility(View.GONE);
+				gesturesEnabled = true;
+				clearImageView();
+			} else {
+				sendData();
+			}
 		} else {
 			Toast.makeText(this, R.string.problem_send_data, Toast.LENGTH_LONG)
 					.show();
@@ -554,14 +611,14 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(SwipeBottomEvent event) {
 		if (gesturesEnabled) {
-			if (photoFiles != null && !photoFiles.isEmpty()) {
-				if (photoFiles.size() == 1) {
+			if (poiPhotos != null && !poiPhotos.isEmpty()) {
+				if (poiPhotos.size() == 1) {
 					clearImageView();
 				} else {
-					File tempImageViewFile = imageViewFile;
+					Photo tempImageViewPhoto = imageViewPhoto;
 					setupImageView(true);
-					if (tempImageViewFile != null) {
-						photoFiles.remove(tempImageViewFile);
+					if (tempImageViewPhoto != null) {
+						poiPhotos.remove(tempImageViewPhoto);
 					}
 				}
 			}
@@ -570,9 +627,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(SwipeLeftEvent event) {
 		if (gesturesEnabled) {
-			if (photoFiles == null) {
-				photoFiles = new ArrayList<File>();
-			}
 			takePhoto();
 		}
 	}
@@ -585,7 +639,14 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(SwipeTopEvent event) {
 		if (gesturesEnabled) {
-			sendData();
+			if (poiPhotos != null && !poiPhotos.isEmpty()) {
+				savePoi();
+			} else if (pois != null && !pois.isEmpty()) {
+				sendData();
+			} else {
+				Toast.makeText(this, R.string.problem_no_photo,
+						Toast.LENGTH_LONG).show();
+			}
 		}
 	}
 
@@ -762,9 +823,15 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
-		photoFiles = retainedFragment.getPhotoFiles();
+		poiPhotos = retainedFragment.getPoiPhotos();
+		pois = retainedFragment.getPois();
 		photoFile = retainedFragment.getPhotoFile();
-		imageViewFile = retainedFragment.getImageViewFile();
+		imageViewPhoto = retainedFragment.getImageViewPhoto();
+	}
+
+	private void savePoi() {
+		pois.add(new Poi(poiPhotos));
+		clearImageView();
 	}
 
 	private void savePrimitiveAttributes() {
@@ -805,92 +872,91 @@ public class MainActivity extends ActionBarActivity implements
 			initRetainedFragment();
 		}
 
-		retainedFragment.setPhotoFiles(photoFiles);
+		retainedFragment.setPoiPhotos(poiPhotos);
+		retainedFragment.setPois(pois);
 		retainedFragment.setPhotoFile(photoFile);
-		retainedFragment.setImageViewFile(imageViewFile);
+		retainedFragment.setImageViewPhoto(imageViewPhoto);
 	}
 
 	// Send the data to the backend server
 	private void sendData() {
 
-		Location location = locationClient.getLastLocation();
+		gesturesEnabled = false;
+		accumulatedTransferSize = 0L;
+		progressBar.setProgress((int) (long) accumulatedTransferSize);
+		progressBar.setVisibility(View.VISIBLE);
 
-		if (location != null && netIsEnabled()) {
-			if (photoFiles != null && !photoFiles.isEmpty()) {
+		TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
+		data.addPart("token", new TransferProgressTypedString(gToken));
 
-				gesturesEnabled = false;
-				accumulatedTransferSize = 0L;
-				progressBar.setProgress((int) (long) accumulatedTransferSize);
-				progressBar.setVisibility(View.VISIBLE);
-
-				TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
-				if (location.hasAccuracy()) {
-					data.addPart("accuracy", new TransferProgressTypedString(
-							String.valueOf(location.getAccuracy())));
+		if (pois != null && !pois.isEmpty()) {
+			int index = 0;
+			for (Photo photo : pois.get(0).photos) {
+				if (photo.accuracy != null) {
+					data.addPart(
+							"accuracy" + index,
+							new TransferProgressTypedString(String
+									.valueOf(photo.accuracy)));
 				}
-				if (location.hasAltitude()) {
-					data.addPart("altitude", new TransferProgressTypedString(
-							String.valueOf(location.getAltitude())));
+				if (photo.altitude != null) {
+					data.addPart(
+							"altitude" + index,
+							new TransferProgressTypedString(String
+									.valueOf(photo.altitude)));
 				}
-				if (location.hasBearing()) {
-					data.addPart("bearing", new TransferProgressTypedString(
-							String.valueOf(location.getBearing())));
+				if (photo.bearing != null) {
+					data.addPart(
+							"bearing" + index,
+							new TransferProgressTypedString(String
+									.valueOf(photo.bearing)));
 				}
 				data.addPart(
-						"latitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getLatitude())));
-				data.addPart("longitude", new TransferProgressTypedString(
-						String.valueOf(location.getLongitude())));
-				data.addPart("provider", new TransferProgressTypedString(
-						location.getProvider()));
+						"latitude" + index,
+						new TransferProgressTypedString(String
+								.valueOf(photo.latitude)));
 				data.addPart(
-						"time",
-						new TransferProgressTypedString(String.valueOf(location
-								.getTime())));
-				data.addPart("token", new TransferProgressTypedString(gToken));
+						"longitude" + index,
+						new TransferProgressTypedString(String
+								.valueOf(photo.longitude)));
+				data.addPart("provider" + index,
+						new TransferProgressTypedString(photo.provider));
+				data.addPart("time" + index, new TransferProgressTypedString(
+						String.valueOf(photo.time)));
 
-				int index = 0;
-				for (File photoFile : photoFiles) {
-					String photoFileUri = Uri.fromFile(photoFile).toString();
-					String mimeType = null;
-					String extension = MimeTypeMap
-							.getFileExtensionFromUrl(photoFileUri);
-					if (extension != null) {
-						MimeTypeMap mime = MimeTypeMap.getSingleton();
-						mimeType = mime.getMimeTypeFromExtension(extension);
-						TransferProgressTypedFile file = new TransferProgressTypedFile(
-								mimeType, photoFile);
-						data.addPart("photo" + index, file);
-						index++;
-					}
-				}
-				totalTransferSize = data.length();
-
-				new SendDataTask().execute(data);
-			} else {
-				Toast.makeText(this, R.string.problem_no_photo,
-						Toast.LENGTH_LONG).show();
+				String photoFileUri = Uri.fromFile(photo.photoFile).toString();
+				String mimeType = null;
+				String extension = MimeTypeMap
+						.getFileExtensionFromUrl(photoFileUri);
+				MimeTypeMap mime = MimeTypeMap.getSingleton();
+				mimeType = mime.getMimeTypeFromExtension(extension);
+				TransferProgressTypedFile file = new TransferProgressTypedFile(
+						mimeType, photo.photoFile);
+				data.addPart("photo" + index, file);
+				index++;
 			}
 		}
+
+		totalTransferSize = data.length();
+
+		new SendDataTask().execute(data);
 	}
 
 	// Place a photo in the imageView if available
 	private void setupImageView(boolean choosePreviousPhoto) {
-		if (photoFiles != null && !photoFiles.isEmpty()) {
+		if (poiPhotos != null && !poiPhotos.isEmpty()) {
 			int newIndex;
-			if (choosePreviousPhoto && imageViewFile != null
-					&& photoFiles.indexOf(imageViewFile) > 0) {
-				newIndex = photoFiles.indexOf(imageViewFile) - 1;
+			if (choosePreviousPhoto && imageViewPhoto != null
+					&& poiPhotos.indexOf(imageViewPhoto) > 0) {
+				newIndex = poiPhotos.indexOf(imageViewPhoto) - 1;
 			} else {
-				newIndex = photoFiles.size() - 1;
+				newIndex = poiPhotos.size() - 1;
 			}
-			imageViewFile = photoFiles.get(newIndex);
+			imageViewPhoto = poiPhotos.get(newIndex);
 			cameraTextView.setVisibility(View.GONE);
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(imageViewFile);
+			Uri photoUri = Uri.fromFile(imageViewPhoto.photoFile);
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
 		} else {

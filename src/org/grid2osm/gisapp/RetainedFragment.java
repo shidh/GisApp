@@ -16,20 +16,25 @@ public class RetainedFragment extends Fragment {
 	 * look at MainActivity to read the object's description. If you want to
 	 * retain simple attributes, use the SharedPreferences.
 	 */
-	private File imageViewFile;
+	private Photo imageViewPhoto;
 	private File photoFile;
-	private ArrayList<File> photoFiles;
+	private ArrayList<Photo> poiPhotos;
+	private ArrayList<Poi> pois;
 
-	File getImageViewFile() {
-		return imageViewFile;
+	Photo getImageViewPhoto() {
+		return imageViewPhoto;
 	}
 
 	File getPhotoFile() {
 		return photoFile;
 	}
 
-	ArrayList<File> getPhotoFiles() {
-		return photoFiles;
+	ArrayList<Photo> getPoiPhotos() {
+		return poiPhotos;
+	}
+
+	ArrayList<Poi> getPois() {
+		return pois;
 	}
 
 	@Override
@@ -40,16 +45,19 @@ public class RetainedFragment extends Fragment {
 		setRetainInstance(true);
 	}
 
-	void setImageViewFile(File imageViewFile) {
-		this.imageViewFile = imageViewFile;
+	void setImageViewPhoto(Photo imageViewPhoto) {
+		this.imageViewPhoto = imageViewPhoto;
 	}
 
 	void setPhotoFile(File photoFile) {
 		this.photoFile = photoFile;
 	}
 
-	void setPhotoFiles(ArrayList<File> photoFiles) {
-		this.photoFiles = photoFiles;
+	void setPoiPhotos(ArrayList<Photo> poiPhotos) {
+		this.poiPhotos = poiPhotos;
 	}
 
+	void setPois(ArrayList<Poi> pois) {
+		this.pois = pois;
+	}
 }
