@@ -2,26 +2,15 @@ package org.grid2osm.gisapp;
 
 import java.io.File;
 
+import android.location.Location;
+
 public class Photo {
 
-	final Float accuracy;
-	final Double altitude;
-	final Float bearing;
-	final double latitude;
-	final double longitude;
-	final File photoFile;
-	final String provider;
-	final long time;
+	final Location location;
+	final File file;
 
-	Photo(Float accuracy, Double altitude, Float bearing, double latitude,
-			double longitude, File photoFile, String provider, long time) {
-		this.accuracy = accuracy;
-		this.altitude = altitude;
-		this.bearing = bearing;
-		this.latitude = latitude;
-		this.longitude = longitude;
-		this.photoFile = photoFile;
-		this.provider = provider;
-		this.time = time;
+	Photo(Location location, File file) {
+		this.location = location;
+		this.file = file;
 	}
 }

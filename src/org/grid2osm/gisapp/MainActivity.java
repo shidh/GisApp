@@ -172,25 +172,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		Location location = locationClient.getLastLocation();
 
-		Float accuracy = null;
-		if (location.hasAccuracy()) {
-			accuracy = location.getAccuracy();
-		}
-		Double altitude = null;
-		if (location.hasAltitude()) {
-			altitude = location.getAltitude();
-		}
-		Float bearing = null;
-		if (location.hasBearing()) {
-			bearing = location.getBearing();
-		}
-		double latitude = location.getLatitude();
-		double longitude = location.getLongitude();
-		String provider = location.getProvider();
-		long time = location.getTime();
-
-		Photo photo = new Photo(accuracy, altitude, bearing, latitude,
-				longitude, photoFile, provider, time);
+		Photo photo = new Photo(location, photoFile);
 
 		imageViewPhoto = photo;
 
@@ -200,7 +182,7 @@ public class MainActivity extends ActionBarActivity implements
 		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-		Uri contentUri = Uri.fromFile(photo.photoFile);
+		Uri contentUri = Uri.fromFile(photo.file);
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
 	}
@@ -894,45 +876,47 @@ public class MainActivity extends ActionBarActivity implements
 		if (pois != null && !pois.isEmpty()) {
 			int index = 0;
 			for (Photo photo : pois.get(0).photos) {
-				if (photo.accuracy != null) {
+				Location location = photo.location;
+				
+				if (location.hasAccuracy()) {
 					data.addPart(
 							"accuracy" + index,
 							new TransferProgressTypedString(String
-									.valueOf(photo.accuracy)));
+									.valueOf(location.getAccuracy())));
 				}
-				if (photo.altitude != null) {
+				if (location.hasAltitude()) {
 					data.addPart(
 							"altitude" + index,
 							new TransferProgressTypedString(String
-									.valueOf(photo.altitude)));
+									.valueOf(location.getAltitude())));
 				}
-				if (photo.bearing != null) {
+				if (location.hasBearing()) {
 					data.addPart(
 							"bearing" + index,
 							new TransferProgressTypedString(String
-									.valueOf(photo.bearing)));
+									.valueOf(location.getBearing())));
 				}
 				data.addPart(
 						"latitude" + index,
 						new TransferProgressTypedString(String
-								.valueOf(photo.latitude)));
+								.valueOf(location.getLatitude())));
 				data.addPart(
 						"longitude" + index,
 						new TransferProgressTypedString(String
-								.valueOf(photo.longitude)));
+								.valueOf(location.getLongitude())));
 				data.addPart("provider" + index,
-						new TransferProgressTypedString(photo.provider));
+						new TransferProgressTypedString(location.getProvider()));
 				data.addPart("time" + index, new TransferProgressTypedString(
-						String.valueOf(photo.time)));
+						String.valueOf(location.getTime())));
 
-				String photoFileUri = Uri.fromFile(photo.photoFile).toString();
+				String photoFileUri = Uri.fromFile(photo.file).toString();
 				String mimeType = null;
 				String extension = MimeTypeMap
 						.getFileExtensionFromUrl(photoFileUri);
 				MimeTypeMap mime = MimeTypeMap.getSingleton();
 				mimeType = mime.getMimeTypeFromExtension(extension);
 				TransferProgressTypedFile file = new TransferProgressTypedFile(
-						mimeType, photo.photoFile);
+						mimeType, photo.file);
 				data.addPart("photo" + index, file);
 				index++;
 			}
@@ -958,7 +942,7 @@ public class MainActivity extends ActionBarActivity implements
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(imageViewPhoto.photoFile);
+			Uri photoUri = Uri.fromFile(imageViewPhoto.file);
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
 		} else {
