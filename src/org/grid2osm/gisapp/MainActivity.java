@@ -604,6 +604,8 @@ public class MainActivity extends ActionBarActivity implements
 				sendData();
 			}
 		} else {
+			progressBar.setVisibility(View.GONE);
+			gesturesEnabled = true;
 			Toast.makeText(this, R.string.problem_send_data, Toast.LENGTH_LONG)
 					.show();
 		}
