@@ -85,6 +85,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
 	private static final String STORAGE_ISSYNCHRONOUS = "org.grid2osm.gisapp.isSynchronous";
+	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
 	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
 	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
@@ -103,6 +104,8 @@ public class MainActivity extends ActionBarActivity implements
 	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
 	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
+	private ArrayList<Location> locationTrace;
+	private Boolean locationTraceEnabled;
 
 	// Attributes used by the REST client
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
@@ -220,6 +223,7 @@ public class MainActivity extends ActionBarActivity implements
 		rootView.setBackgroundColor(Color.WHITE);
 		imageViewPhoto = null;
 		poiPhotos = new ArrayList<Photo>();
+		locationTrace = new ArrayList<Location>();
 	}
 
 	// Create a file for saving the photo
@@ -426,6 +430,11 @@ public class MainActivity extends ActionBarActivity implements
 			 */
 			addPhotoToListAndGallery();
 
+			// After adding the first photo to the list, enable location tracing.
+			if (poiPhotos.size() == 1) {
+				locationTraceEnabled = true;
+			}
+			
 			// Photo taken and saved; allow the user to take another one
 			takePhoto();
 		}
@@ -488,6 +497,11 @@ public class MainActivity extends ActionBarActivity implements
 		// Initialize the poiPhotos
 		if (poiPhotos == null) {
 			poiPhotos = new ArrayList<Photo>();
+		}
+
+		// Initialize the trace
+		if (locationTrace == null) {
+			locationTrace = new ArrayList<Location>();
 		}
 	}
 
@@ -624,6 +638,7 @@ public class MainActivity extends ActionBarActivity implements
 	public void onEventMainThread(SwipeTopEvent event) {
 		if (gesturesEnabled) {
 			if (poiPhotos != null && !poiPhotos.isEmpty()) {
+				locationTraceEnabled = false;
 				savePoi();
 			} else if (pois != null && !pois.isEmpty()) {
 				sendData();
@@ -642,7 +657,9 @@ public class MainActivity extends ActionBarActivity implements
 
 	@Override
 	public void onLocationChanged(Location location) {
-
+		if (locationTraceEnabled != null && locationTraceEnabled) {
+			locationTrace.add(location);
+		}
 	}
 
 	@Override
@@ -791,6 +808,10 @@ public class MainActivity extends ActionBarActivity implements
 			isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
 					false);
 		}
+		if (storagePrefs.contains(STORAGE_LOCATIONTRACEENABLED)) {
+			locationTraceEnabled = storagePrefs.getBoolean(
+					STORAGE_LOCATIONTRACEENABLED, false);
+		}
 		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
 			progressBar.setVisibility(storagePrefs.getInt(
 					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
@@ -811,10 +832,11 @@ public class MainActivity extends ActionBarActivity implements
 		pois = retainedFragment.getPois();
 		photoFile = retainedFragment.getPhotoFile();
 		imageViewPhoto = retainedFragment.getImageViewPhoto();
+		locationTrace = retainedFragment.getLocationTrace();
 	}
 
 	private void savePoi() {
-		pois.add(new Poi(poiPhotos));
+		pois.add(new Poi(locationTrace, poiPhotos));
 		clearImageView();
 	}
 
@@ -842,6 +864,10 @@ public class MainActivity extends ActionBarActivity implements
 		if (isSynchronous != null) {
 			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
 		}
+		if (locationTraceEnabled != null) {
+			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
+					locationTraceEnabled);
+		}
 		storageEditor.putInt(STORAGE_PROGRESSBARVISIBILITY,
 				progressBar.getVisibility());
 		if (totalTransferSize != null) {
@@ -860,6 +886,7 @@ public class MainActivity extends ActionBarActivity implements
 		retainedFragment.setPois(pois);
 		retainedFragment.setPhotoFile(photoFile);
 		retainedFragment.setImageViewPhoto(imageViewPhoto);
+		retainedFragment.setLocationTrace(locationTrace);
 	}
 
 	// Send the data to the backend server
@@ -874,40 +901,81 @@ public class MainActivity extends ActionBarActivity implements
 		data.addPart("token", new TransferProgressTypedString(gToken));
 
 		if (pois != null && !pois.isEmpty()) {
+			Poi poi = pois.get(0);
 			int index = 0;
-			for (Photo photo : pois.get(0).photos) {
-				Location location = photo.location;
-				
+
+			for (Location location : poi.locationTrace) {
 				if (location.hasAccuracy()) {
 					data.addPart(
-							"accuracy" + index,
+							"trace_" + index + "_accuracy",
 							new TransferProgressTypedString(String
 									.valueOf(location.getAccuracy())));
 				}
 				if (location.hasAltitude()) {
 					data.addPart(
-							"altitude" + index,
+							"trace_" + index + "_altitude",
 							new TransferProgressTypedString(String
 									.valueOf(location.getAltitude())));
 				}
 				if (location.hasBearing()) {
 					data.addPart(
-							"bearing" + index,
+							"trace_" + index + "_bearing",
 							new TransferProgressTypedString(String
 									.valueOf(location.getBearing())));
 				}
 				data.addPart(
-						"latitude" + index,
-						new TransferProgressTypedString(String
-								.valueOf(location.getLatitude())));
+						"trace_" + index + "_latitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getLatitude())));
 				data.addPart(
-						"longitude" + index,
-						new TransferProgressTypedString(String
-								.valueOf(location.getLongitude())));
-				data.addPart("provider" + index,
+						"trace_" + index + "_longitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getLongitude())));
+				data.addPart("trace_" + index + "_provider",
 						new TransferProgressTypedString(location.getProvider()));
-				data.addPart("time" + index, new TransferProgressTypedString(
-						String.valueOf(location.getTime())));
+				data.addPart(
+						"trace_" + index + "_time",
+						new TransferProgressTypedString(String.valueOf(location
+								.getTime())));
+				index++;
+			}
+			index = 0;
+
+			for (Photo photo : poi.photos) {
+				Location location = photo.location;
+
+				if (location.hasAccuracy()) {
+					data.addPart(
+							"photo_" + index + "_accuracy",
+							new TransferProgressTypedString(String
+									.valueOf(location.getAccuracy())));
+				}
+				if (location.hasAltitude()) {
+					data.addPart(
+							"photo_" + index + "_altitude",
+							new TransferProgressTypedString(String
+									.valueOf(location.getAltitude())));
+				}
+				if (location.hasBearing()) {
+					data.addPart(
+							"photo_" + index + "_bearing",
+							new TransferProgressTypedString(String
+									.valueOf(location.getBearing())));
+				}
+				data.addPart(
+						"photo_" + index + "_latitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getLatitude())));
+				data.addPart(
+						"photo_" + index + "_longitude",
+						new TransferProgressTypedString(String.valueOf(location
+								.getLongitude())));
+				data.addPart("photo_" + index + "_provider",
+						new TransferProgressTypedString(location.getProvider()));
+				data.addPart(
+						"photo_" + index + "_time",
+						new TransferProgressTypedString(String.valueOf(location
+								.getTime())));
 
 				String photoFileUri = Uri.fromFile(photo.file).toString();
 				String mimeType = null;
@@ -917,7 +985,7 @@ public class MainActivity extends ActionBarActivity implements
 				mimeType = mime.getMimeTypeFromExtension(extension);
 				TransferProgressTypedFile file = new TransferProgressTypedFile(
 						mimeType, photo.file);
-				data.addPart("photo" + index, file);
+				data.addPart("photo_" + index + "_file", file);
 				index++;
 			}
 		}

@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 
 import android.app.Fragment;
+import android.location.Location;
 import android.os.Bundle;
 
 /*
@@ -17,12 +18,17 @@ public class RetainedFragment extends Fragment {
 	 * retain simple attributes, use the SharedPreferences.
 	 */
 	private Photo imageViewPhoto;
+	private ArrayList<Location> locationTrace;
 	private File photoFile;
 	private ArrayList<Photo> poiPhotos;
 	private ArrayList<Poi> pois;
 
 	Photo getImageViewPhoto() {
 		return imageViewPhoto;
+	}
+
+	public ArrayList<Location> getLocationTrace() {
+		return locationTrace;
 	}
 
 	File getPhotoFile() {
@@ -47,6 +53,10 @@ public class RetainedFragment extends Fragment {
 
 	void setImageViewPhoto(Photo imageViewPhoto) {
 		this.imageViewPhoto = imageViewPhoto;
+	}
+
+	public void setLocationTrace(ArrayList<Location> locationTrace) {
+		this.locationTrace = locationTrace;
 	}
 
 	void setPhotoFile(File photoFile) {
