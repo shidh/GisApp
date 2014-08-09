@@ -523,7 +523,7 @@ public class MainActivity extends ActionBarActivity implements
 	}
 	
 	private void updatePoiMenuItemButton() {
-		Button poiMenuItemButton = (Button) poiMenuItem.getActionView().findViewById(R.id.poi_text);
+		Button poiMenuItemButton = (Button) poiMenuItem.getActionView().findViewById(R.id.poiText);
 		
 		if (pois.isEmpty()) {
 			poiMenuItem.setVisible(false);
