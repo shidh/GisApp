@@ -3,6 +3,13 @@
     xmlns:gisapp="http://schemas.android.com/apk/res-auto" >
 
     <item
+        android:id="@+id/poi"
+        android:icon="@drawable/poi_shape"
+        android:title="@string/poi"
+        android:visible="false"
+        gisapp:actionLayout="@layout/poi_text"
+        gisapp:showAsAction="ifRoom"/>
+    <item
         android:id="@+id/changeAccount"
         android:icon="@drawable/ic_action_accounts"
         android:title="@string/changeAccount"

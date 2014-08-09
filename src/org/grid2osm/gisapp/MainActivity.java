@@ -69,6 +69,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.MimeTypeMap;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -169,6 +170,9 @@ public class MainActivity extends ActionBarActivity implements
 	 * the data.
 	 */
 	private Boolean takeAnotherPhoto;
+	
+	// Menu item with counter for POI items 
+	private MenuItem poiMenuItem;
 
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
@@ -475,7 +479,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Restore primitive attributes
 		restorePrimitiveAttributes();
-
+		
 		/*
 		 * Create a new location client, using the enclosing class to handle
 		 * callbacks
@@ -510,7 +514,23 @@ public class MainActivity extends ActionBarActivity implements
 		// Inflate the menu; this adds items to the action bar if it is present.
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.main, menu);
+		poiMenuItem = menu.findItem(R.id.poi);
+		
+		// Restore the POI counter
+		updatePoiMenuItemButton();
+		
 		return super.onCreateOptionsMenu(menu);
+	}
+	
+	private void updatePoiMenuItemButton() {
+		Button poiMenuItemButton = (Button) poiMenuItem.getActionView().findViewById(R.id.poi_text);
+		
+		if (pois.isEmpty()) {
+			poiMenuItem.setVisible(false);
+		} else {
+			poiMenuItem.setVisible(true);
+			poiMenuItemButton.setText(String.valueOf(pois.size()));
+		}
 	}
 
 	@Override
@@ -592,6 +612,7 @@ public class MainActivity extends ActionBarActivity implements
 			 * a new photo list.
 			 */
 			pois.remove(0);
+			updatePoiMenuItemButton();
 			if (pois.isEmpty()) {
 				progressBar.setVisibility(View.GONE);
 				gesturesEnabled = true;
@@ -837,6 +858,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	private void savePoi() {
 		pois.add(new Poi(locationTrace, poiPhotos));
+		updatePoiMenuItemButton();
 		clearImageView();
 	}
 
