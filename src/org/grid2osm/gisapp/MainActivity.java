@@ -7,11 +7,13 @@ import java.util.Date;
 import java.util.Locale;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.AsyncTask.CheckTokenTask;
 import org.grid2osm.gisapp.AsyncTask.GetTokenTask;
 import org.grid2osm.gisapp.AsyncTask.SendDataTask;
 import org.grid2osm.gisapp.dialog.GpsSettingsDialog;
 import org.grid2osm.gisapp.dialog.NetSettingsDialog;
 import org.grid2osm.gisapp.dialog.PlayServicesDialog;
+import org.grid2osm.gisapp.event.CheckTokenTaskFailureEvent;
 import org.grid2osm.gisapp.event.GetTokenFinishedEvent;
 import org.grid2osm.gisapp.event.GpsSettingsDialogNegativeClickEvent;
 import org.grid2osm.gisapp.event.GpsSettingsDialogPositiveClickEvent;
@@ -513,6 +515,10 @@ public class MainActivity extends ActionBarActivity implements
 
 	}
 
+	public void onEventMainThread(CheckTokenTaskFailureEvent event) {
+		getUsername();
+	}
+
 	public void onEventMainThread(GetTokenFinishedEvent event) {
 		gToken = event.gToken;
 		if (resumeSend != null && resumeSend) {
@@ -635,6 +641,7 @@ public class MainActivity extends ActionBarActivity implements
 			} else if (pois != null && !pois.isEmpty()) {
 				// Check for network connectivity.
 				if (netIsEnabled()) {
+					new CheckTokenTask().execute(gToken);
 					sendData();
 				} else {
 					NetSettingsDialog netSettings = new NetSettingsDialog();
