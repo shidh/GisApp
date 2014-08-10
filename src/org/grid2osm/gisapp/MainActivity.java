@@ -165,13 +165,13 @@ public class MainActivity extends ActionBarActivity implements
 	 * the data.
 	 */
 	private Boolean takeAnotherPhoto;
-	
-	// Menu item with counter for POI items 
+
+	// Menu item with counter for POI items
 	private MenuItem poiMenuItem;
 
 	// Resume sending after refreshing the Google token
 	private Boolean resumeSend;
-	
+
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 
@@ -254,7 +254,7 @@ public class MainActivity extends ActionBarActivity implements
 		if (gMail == null) {
 			pickUserAccount();
 		} else if (netIsEnabled()) {
-				new GetTokenTask(this, gMail, SCOPE).execute();
+			new GetTokenTask(this, gMail, SCOPE).execute();
 		}
 	}
 
@@ -415,11 +415,12 @@ public class MainActivity extends ActionBarActivity implements
 			 */
 			addPhotoToListAndGallery();
 
-			// After adding the first photo to the list, enable location tracing.
+			// After adding the first photo to the list, enable location
+			// tracing.
 			if (poiPhotos.size() == 1) {
 				locationTraceEnabled = true;
 			}
-			
+
 			// Photo taken and saved; allow the user to take another one
 			takePhoto();
 		}
@@ -461,7 +462,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Restore primitive attributes
 		restorePrimitiveAttributes();
-		
+
 		/*
 		 * Create a new location client, using the enclosing class to handle
 		 * callbacks
@@ -497,22 +498,11 @@ public class MainActivity extends ActionBarActivity implements
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.main, menu);
 		poiMenuItem = menu.findItem(R.id.poi);
-		
+
 		// Restore the POI counter
 		updatePoiMenuItemButton();
-		
+
 		return super.onCreateOptionsMenu(menu);
-	}
-	
-	private void updatePoiMenuItemButton() {
-		Button poiMenuItemButton = (Button) poiMenuItem.getActionView().findViewById(R.id.poiText);
-		
-		if (pois.isEmpty()) {
-			poiMenuItem.setVisible(false);
-		} else {
-			poiMenuItem.setVisible(true);
-			poiMenuItemButton.setText(String.valueOf(pois.size()));
-		}
 	}
 
 	@Override
@@ -591,8 +581,8 @@ public class MainActivity extends ActionBarActivity implements
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
 			progressBar.setVisibility(View.GONE);
 			progressCircle.setVisibility(View.VISIBLE);
-			Toast.makeText(this, R.string.problem_token_expired, Toast.LENGTH_SHORT)
-			.show();
+			Toast.makeText(this, R.string.problem_token_expired,
+					Toast.LENGTH_SHORT).show();
 			resumeSend = true;
 			getUsername();
 		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
@@ -1086,6 +1076,18 @@ public class MainActivity extends ActionBarActivity implements
 
 				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
+		}
+	}
+
+	private void updatePoiMenuItemButton() {
+		Button poiMenuItemButton = (Button) poiMenuItem.getActionView()
+				.findViewById(R.id.poiText);
+
+		if (pois.isEmpty()) {
+			poiMenuItem.setVisible(false);
+		} else {
+			poiMenuItem.setVisible(true);
+			poiMenuItemButton.setText(String.valueOf(pois.size()));
 		}
 	}
 }
