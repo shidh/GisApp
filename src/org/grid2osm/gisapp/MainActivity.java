@@ -207,13 +207,6 @@ public class MainActivity extends ActionBarActivity implements
 			dialogs.add(gpsSettings);
 			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
 		}
-
-		// Check for network connectivity.
-		else if (!netIsEnabled()) {
-			NetSettingsDialog netSettings = new NetSettingsDialog();
-			dialogs.add(netSettings);
-			netSettings.show(getSupportFragmentManager(), "netSettings");
-		}
 	}
 
 	private void clearImageView() {
@@ -358,7 +351,6 @@ public class MainActivity extends ActionBarActivity implements
 			if (!netIsEnabled()) {
 				Toast.makeText(this, R.string.problem_no_net,
 						Toast.LENGTH_SHORT).show();
-				finish();
 			}
 		} else if (requestCode == INTENT_PICK_ACCOUNT) {
 			accountPickerIsOpen = false;
@@ -555,7 +547,6 @@ public class MainActivity extends ActionBarActivity implements
 		if (!netIsEnabled()) {
 			Toast.makeText(this, R.string.problem_no_net, Toast.LENGTH_SHORT)
 					.show();
-			finish();
 		}
 	}
 
@@ -642,7 +633,14 @@ public class MainActivity extends ActionBarActivity implements
 				locationTraceEnabled = false;
 				savePoi();
 			} else if (pois != null && !pois.isEmpty()) {
-				sendData();
+				// Check for network connectivity.
+				if (netIsEnabled()) {
+					sendData();
+				} else {
+					NetSettingsDialog netSettings = new NetSettingsDialog();
+					netSettings
+							.show(getSupportFragmentManager(), "netSettings");
+				}
 			} else {
 				Toast.makeText(this, R.string.problem_no_photo,
 						Toast.LENGTH_LONG).show();
