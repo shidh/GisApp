@@ -29,5 +29,6 @@
     <string name="problem_no_play">Google Play services are mandatory. The app closes, because it is missing.</string>
     <string name="problem_no_server_connection">The backend server could not be contacted.</string>
     <string name="problem_send_data">An error occurred while sending the data.</string>
+    <string name="problem_token_expired">The Google authorization token expired. The app is requesting a new one.</string>
 
 </resources>

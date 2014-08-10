@@ -5,9 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.http.HttpStatus;
 import org.grid2osm.gisapp.AsyncTask.GetTokenTask;
@@ -85,10 +82,11 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
-	private static final String STORAGE_ISSYNCHRONOUS = "org.grid2osm.gisapp.isSynchronous";
 	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
 	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
+	private static final String STORAGE_PROGRESSCIRCLEVISIBILITY = "org.grid2osm.gisapp.progressCircle.visibility";
+	private static final String STORAGE_RESUMESEND = "org.grid2osm.gisapp.resumeSend";
 	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
 	private Editor storageEditor;
 	private SharedPreferences storagePrefs;
@@ -112,6 +110,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
 	private String gToken;
 	private ProgressBar progressBar;
+	private ProgressBar progressCircle;
 	private Long accumulatedTransferSize;
 	private Long totalTransferSize;
 
@@ -132,10 +131,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	// Users's Google mail address
 	private String gMail;
-
-	// Synchronous or asynchronous token request
-	private static final int TIME_4_TOKEN_SYNC_REQUEST = 5000;
-	private Boolean isSynchronous;
 
 	// Attributes for gesture recognition
 	private GestureDetectorCompat gestureDetector;
@@ -174,6 +169,9 @@ public class MainActivity extends ActionBarActivity implements
 	// Menu item with counter for POI items 
 	private MenuItem poiMenuItem;
 
+	// Resume sending after refreshing the Google token
+	private Boolean resumeSend;
+	
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 
@@ -256,24 +254,7 @@ public class MainActivity extends ActionBarActivity implements
 		if (gMail == null) {
 			pickUserAccount();
 		} else if (netIsEnabled()) {
-			if (isSynchronous != null && isSynchronous) {
-				isSynchronous = false;
-				try {
-					new GetTokenTask(this, gMail, SCOPE).execute().get(
-							TIME_4_TOKEN_SYNC_REQUEST, TimeUnit.MILLISECONDS);
-				} catch (InterruptedException e) {
-					Toast.makeText(this, R.string.problem_get_token,
-							Toast.LENGTH_LONG).show();
-				} catch (ExecutionException e) {
-					Toast.makeText(this, R.string.problem_get_token,
-							Toast.LENGTH_LONG).show();
-				} catch (TimeoutException e) {
-					Toast.makeText(this, R.string.problem_get_token,
-							Toast.LENGTH_LONG).show();
-				}
-			} else {
 				new GetTokenTask(this, gMail, SCOPE).execute();
-			}
 		}
 	}
 
@@ -468,6 +449,7 @@ public class MainActivity extends ActionBarActivity implements
 		deleteTextView = (TextView) findViewById(R.id.delete);
 		previewTextView = (TextView) findViewById(R.id.preview);
 		progressBar = (ProgressBar) findViewById(R.id.progressBar);
+		progressCircle = (ProgressBar) findViewById(R.id.progressCircle);
 		rootView = findViewById(android.R.id.content);
 		sendTextView = (TextView) findViewById(R.id.send);
 
@@ -551,6 +533,11 @@ public class MainActivity extends ActionBarActivity implements
 
 	public void onEventMainThread(GetTokenFinishedEvent event) {
 		gToken = event.gToken;
+		if (resumeSend != null && resumeSend) {
+			resumeSend = false;
+			progressCircle.setVisibility(View.GONE);
+			sendData();
+		}
 	}
 
 	public void onEventMainThread(GpsSettingsDialogNegativeClickEvent event) {
@@ -602,9 +589,12 @@ public class MainActivity extends ActionBarActivity implements
 					R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
 					.show();
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
-			isSynchronous = true;
+			progressBar.setVisibility(View.GONE);
+			progressCircle.setVisibility(View.VISIBLE);
+			Toast.makeText(this, R.string.problem_token_expired, Toast.LENGTH_SHORT)
+			.show();
+			resumeSend = true;
 			getUsername();
-			sendData();
 		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
 			/*
 			 * The poi data and photos were sent successfully. Therefore, we
@@ -825,10 +815,6 @@ public class MainActivity extends ActionBarActivity implements
 		if (storagePrefs.contains(STORAGE_GTOKEN)) {
 			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
 		}
-		if (storagePrefs.contains(STORAGE_ISSYNCHRONOUS)) {
-			isSynchronous = storagePrefs.getBoolean(STORAGE_ISSYNCHRONOUS,
-					false);
-		}
 		if (storagePrefs.contains(STORAGE_LOCATIONTRACEENABLED)) {
 			locationTraceEnabled = storagePrefs.getBoolean(
 					STORAGE_LOCATIONTRACEENABLED, false);
@@ -836,6 +822,13 @@ public class MainActivity extends ActionBarActivity implements
 		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
 			progressBar.setVisibility(storagePrefs.getInt(
 					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
+		}
+		if (storagePrefs.contains(STORAGE_PROGRESSCIRCLEVISIBILITY)) {
+			progressCircle.setVisibility(storagePrefs.getInt(
+					STORAGE_PROGRESSCIRCLEVISIBILITY, View.GONE));
+		}
+		if (storagePrefs.contains(STORAGE_RESUMESEND)) {
+			resumeSend = storagePrefs.getBoolean(STORAGE_RESUMESEND, false);
 		}
 		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
 			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
@@ -883,15 +876,17 @@ public class MainActivity extends ActionBarActivity implements
 		if (gToken != null) {
 			storageEditor.putString(STORAGE_GTOKEN, gToken);
 		}
-		if (isSynchronous != null) {
-			storageEditor.putBoolean(STORAGE_ISSYNCHRONOUS, isSynchronous);
-		}
 		if (locationTraceEnabled != null) {
 			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
 					locationTraceEnabled);
 		}
+		if (resumeSend != null) {
+			storageEditor.putBoolean(STORAGE_RESUMESEND, resumeSend);
+		}
 		storageEditor.putInt(STORAGE_PROGRESSBARVISIBILITY,
 				progressBar.getVisibility());
+		storageEditor.putInt(STORAGE_PROGRESSCIRCLEVISIBILITY,
+				progressCircle.getVisibility());
 		if (totalTransferSize != null) {
 			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
 		}
