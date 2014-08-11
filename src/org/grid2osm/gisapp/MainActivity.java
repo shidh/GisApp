@@ -89,6 +89,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
 	private static final String STORAGE_PROGRESSCIRCLEVISIBILITY = "org.grid2osm.gisapp.progressCircle.visibility";
 	private static final String STORAGE_RESUMESEND = "org.grid2osm.gisapp.resumeSend";
+	private static final String STORAGE_TAKEANOTHERPHOTO = "org.grid2osm.gisapp.takeAnotherPhoto";
 	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
 	private Editor storageEditor;
 	private SharedPreferences storagePrefs;
@@ -825,6 +826,9 @@ public class MainActivity extends ActionBarActivity implements
 		if (storagePrefs.contains(STORAGE_RESUMESEND)) {
 			resumeSend = storagePrefs.getBoolean(STORAGE_RESUMESEND, false);
 		}
+		if (storagePrefs.contains(STORAGE_TAKEANOTHERPHOTO)) {
+			takeAnotherPhoto = storagePrefs.getBoolean(STORAGE_TAKEANOTHERPHOTO, false);
+		}
 		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
 			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
 					0L);
@@ -882,6 +886,9 @@ public class MainActivity extends ActionBarActivity implements
 				progressBar.getVisibility());
 		storageEditor.putInt(STORAGE_PROGRESSCIRCLEVISIBILITY,
 				progressCircle.getVisibility());
+		if (takeAnotherPhoto != null) {
+			storageEditor.putBoolean(STORAGE_TAKEANOTHERPHOTO, takeAnotherPhoto);
+		}
 		if (totalTransferSize != null) {
 			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
 		}
