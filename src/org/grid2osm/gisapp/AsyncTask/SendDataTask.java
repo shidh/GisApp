@@ -19,7 +19,7 @@ import android.os.AsyncTask;
 public class SendDataTask extends
 		AsyncTask<TransferProgressMultipartTypedOutput, Void, Void> {
 
-	private static final String REST_SERVER = "http://www.play.localdomain";
+	private static final String REST_SERVER = "https://www.grid2osm.org";
 
 	@Override
 	protected Void doInBackground(
@@ -40,7 +40,6 @@ public class SendDataTask extends
 
 					EventBus.getDefault().post(new SendDataTaskEvent(null));
 				} else {
-
 					EventBus.getDefault().post(
 							new SendDataTaskEvent(error.getResponse()
 									.getStatus()));
