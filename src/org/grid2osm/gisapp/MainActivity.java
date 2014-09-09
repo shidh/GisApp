@@ -182,7 +182,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		Location location = locationClient.getLastLocation();
 
-		Photo photo = new Photo(location, new File(photoFilePath));
+		Photo photo = new Photo(location, photoFilePath);
 
 		// Add the photo to the list
 		poiPhotos.add(photo);
@@ -192,7 +192,7 @@ public class MainActivity extends ActionBarActivity implements
 		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-		Uri contentUri = Uri.fromFile(photo.file);
+		Uri contentUri = Uri.fromFile(new File(photo.filePath));
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
 	}
@@ -970,49 +970,48 @@ public class MainActivity extends ActionBarActivity implements
 			index = 0;
 
 			for (Photo photo : poi.photos) {
-				CustomLocation location = photo.location;
 
-				if (location.accuracy != null) {
+				if (photo.accuracy != null) {
 					data.addPart(
 							"photo_" + index + "_accuracy",
 							new TransferProgressTypedString(String
-									.valueOf(location.accuracy)));
+									.valueOf(photo.accuracy)));
 				}
-				if (location.altitude != null) {
+				if (photo.altitude != null) {
 					data.addPart(
 							"photo_" + index + "_altitude",
 							new TransferProgressTypedString(String
-									.valueOf(location.altitude)));
+									.valueOf(photo.altitude)));
 				}
-				if (location.bearing != null) {
+				if (photo.bearing != null) {
 					data.addPart(
 							"photo_" + index + "_bearing",
 							new TransferProgressTypedString(String
-									.valueOf(location.bearing)));
+									.valueOf(photo.bearing)));
 				}
 				data.addPart(
 						"photo_" + index + "_latitude",
-						new TransferProgressTypedString(String.valueOf(location
+						new TransferProgressTypedString(String.valueOf(photo
 								.latitude)));
 				data.addPart(
 						"photo_" + index + "_longitude",
-						new TransferProgressTypedString(String.valueOf(location
+						new TransferProgressTypedString(String.valueOf(photo
 								.longitude)));
 				data.addPart("photo_" + index + "_provider",
-						new TransferProgressTypedString(location.provider));
+						new TransferProgressTypedString(photo.provider));
 				data.addPart(
 						"photo_" + index + "_time",
-						new TransferProgressTypedString(String.valueOf(location
+						new TransferProgressTypedString(String.valueOf(photo
 								.time)));
 
-				String photoFileUri = Uri.fromFile(photo.file).toString();
+				String photoFileUri = Uri.fromFile(new File(photo.filePath)).toString();
 				String mimeType = null;
 				String extension = MimeTypeMap
 						.getFileExtensionFromUrl(photoFileUri);
 				MimeTypeMap mime = MimeTypeMap.getSingleton();
 				mimeType = mime.getMimeTypeFromExtension(extension);
 				TransferProgressTypedFile file = new TransferProgressTypedFile(
-						mimeType, photo.file);
+						mimeType, new File(photo.filePath));
 				data.addPart("photo_" + index + "_file", file);
 				index++;
 			}
@@ -1037,7 +1036,7 @@ public class MainActivity extends ActionBarActivity implements
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(imageViewPhoto.file);
+			Uri photoUri = Uri.fromFile(new File(imageViewPhoto.filePath));
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
 			imageViewIndex = newIndex;
