@@ -108,7 +108,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
 	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
-	private ArrayList<CustomLocation> locationTrace;
+	private ArrayList<CustomLocation> poiLocationTrace;
 	private Boolean locationTraceEnabled;
 
 	// Attributes used by the REST client
@@ -223,7 +223,7 @@ public class MainActivity extends ActionBarActivity implements
 		rootView.setBackgroundColor(Color.WHITE);
 		imageViewIndex = 0;
 		poiPhotos = new ArrayList<Photo>();
-		locationTrace = new ArrayList<CustomLocation>();
+		poiLocationTrace = new ArrayList<CustomLocation>();
 	}
 
 	// Create a file for saving the photo
@@ -484,8 +484,8 @@ public class MainActivity extends ActionBarActivity implements
 		}
 
 		// Initialize the trace
-		if (locationTrace == null) {
-			locationTrace = new ArrayList<CustomLocation>();
+		if (poiLocationTrace == null) {
+			poiLocationTrace = new ArrayList<CustomLocation>();
 		}
 	}
 
@@ -668,7 +668,7 @@ public class MainActivity extends ActionBarActivity implements
 	public void onLocationChanged(Location location) {
 		if (locationTraceEnabled != null && locationTraceEnabled) {
 			CustomLocation customLocation = new CustomLocation(location);
-			locationTrace.add(customLocation);
+			poiLocationTrace.add(customLocation);
 		}
 	}
 
@@ -852,11 +852,11 @@ public class MainActivity extends ActionBarActivity implements
 
 		poiPhotos = retainedFragment.getPoiPhotos();
 		pois = retainedFragment.getPois();
-		locationTrace = retainedFragment.getLocationTrace();
+		poiLocationTrace = retainedFragment.getPoiLocationTrace();
 	}
 
 	private void savePoi() {
-		pois.add(new Poi(locationTrace, poiPhotos));
+		pois.add(new Poi(poiLocationTrace, poiPhotos));
 		updatePoiMenuItemButton();
 		clearImageView();
 	}
@@ -914,7 +914,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		retainedFragment.setPoiPhotos(poiPhotos);
 		retainedFragment.setPois(pois);
-		retainedFragment.setLocationTrace(locationTrace);
+		retainedFragment.setPoiLocationTrace(poiLocationTrace);
 	}
 
 	// Send the data to the backend server

@@ -16,12 +16,12 @@ public class RetainedFragment extends Fragment {
 	 * look at MainActivity to read the object's description. If you want to
 	 * retain simple attributes, use the SharedPreferences.
 	 */
-	private ArrayList<CustomLocation> locationTrace;
+	private ArrayList<CustomLocation> poiLocationTrace;
 	private ArrayList<Photo> poiPhotos;
 	private ArrayList<Poi> pois;
 
-	public ArrayList<CustomLocation> getLocationTrace() {
-		return locationTrace;
+	public ArrayList<CustomLocation> getPoiLocationTrace() {
+		return poiLocationTrace;
 	}
 
 	ArrayList<Photo> getPoiPhotos() {
@@ -40,8 +40,8 @@ public class RetainedFragment extends Fragment {
 		setRetainInstance(true);
 	}
 
-	public void setLocationTrace(ArrayList<CustomLocation> locationTrace) {
-		this.locationTrace = locationTrace;
+	public void setPoiLocationTrace(ArrayList<CustomLocation> locationTrace) {
+		this.poiLocationTrace = locationTrace;
 	}
 
 	void setPoiPhotos(ArrayList<Photo> poiPhotos) {
