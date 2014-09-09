@@ -19,7 +19,6 @@ public class RetainedFragment extends Fragment {
 	 */
 	private Photo imageViewPhoto;
 	private ArrayList<Location> locationTrace;
-	private File photoFile;
 	private ArrayList<Photo> poiPhotos;
 	private ArrayList<Poi> pois;
 
@@ -29,10 +28,6 @@ public class RetainedFragment extends Fragment {
 
 	public ArrayList<Location> getLocationTrace() {
 		return locationTrace;
-	}
-
-	File getPhotoFile() {
-		return photoFile;
 	}
 
 	ArrayList<Photo> getPoiPhotos() {
@@ -57,10 +52,6 @@ public class RetainedFragment extends Fragment {
 
 	public void setLocationTrace(ArrayList<Location> locationTrace) {
 		this.locationTrace = locationTrace;
-	}
-
-	void setPhotoFile(File photoFile) {
-		this.photoFile = photoFile;
 	}
 
 	void setPoiPhotos(ArrayList<Photo> poiPhotos) {

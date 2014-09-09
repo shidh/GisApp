@@ -85,6 +85,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
 	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
+	private static final String STORAGE_PHOTOFILEPATH = "org.grid2osm.gisapp.photoFilePath";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
 	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
 	private static final String STORAGE_PROGRESSCIRCLEVISIBILITY = "org.grid2osm.gisapp.progressCircle.visibility";
@@ -127,7 +128,7 @@ public class MainActivity extends ActionBarActivity implements
 
 	// The photo file where the camera stores the taken photo temporarily to
 	// create an entry in "poiPhotos"
-	private File photoFile;
+	private String photoFilePath;
 
 	// Current photo on the imageView
 	private Photo imageViewPhoto;
@@ -180,7 +181,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		Location location = locationClient.getLastLocation();
 
-		Photo photo = new Photo(location, photoFile);
+		Photo photo = new Photo(location, new File(photoFilePath));
 
 		imageViewPhoto = photo;
 
@@ -234,7 +235,7 @@ public class MainActivity extends ActionBarActivity implements
 					+ timeStamp;
 			File storageDir = Environment
 					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-			photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
+			photoFilePath = new File(storageDir.getPath(), photoFileName + ".jpg").getPath();
 		} catch (Exception e) {
 			Toast.makeText(this, R.string.problem_create_file,
 					Toast.LENGTH_LONG).show();
@@ -815,6 +816,9 @@ public class MainActivity extends ActionBarActivity implements
 			locationTraceEnabled = storagePrefs.getBoolean(
 					STORAGE_LOCATIONTRACEENABLED, false);
 		}
+		if (storagePrefs.contains(STORAGE_PHOTOFILEPATH)) {
+			photoFilePath = storagePrefs.getString(STORAGE_PHOTOFILEPATH, null);
+		}
 		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
 			progressBar.setVisibility(storagePrefs.getInt(
 					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
@@ -843,7 +847,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		poiPhotos = retainedFragment.getPoiPhotos();
 		pois = retainedFragment.getPois();
-		photoFile = retainedFragment.getPhotoFile();
 		imageViewPhoto = retainedFragment.getImageViewPhoto();
 		locationTrace = retainedFragment.getLocationTrace();
 	}
@@ -879,6 +882,9 @@ public class MainActivity extends ActionBarActivity implements
 			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
 					locationTraceEnabled);
 		}
+		if (photoFilePath != null) {
+			storageEditor.putString(STORAGE_PHOTOFILEPATH, photoFilePath);
+		}
 		if (resumeSend != null) {
 			storageEditor.putBoolean(STORAGE_RESUMESEND, resumeSend);
 		}
@@ -903,7 +909,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		retainedFragment.setPoiPhotos(poiPhotos);
 		retainedFragment.setPois(pois);
-		retainedFragment.setPhotoFile(photoFile);
 		retainedFragment.setImageViewPhoto(imageViewPhoto);
 		retainedFragment.setLocationTrace(locationTrace);
 	}
@@ -1080,11 +1085,11 @@ public class MainActivity extends ActionBarActivity implements
 			createPhotoFile();
 
 			// Continue only if the file was successfully created
-			if (photoFile != null) {
+			if (photoFilePath != null) {
 
 				// Set the image file name
 				takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-						Uri.fromFile(photoFile));
+						Uri.fromFile(new File(photoFilePath)));
 
 				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
