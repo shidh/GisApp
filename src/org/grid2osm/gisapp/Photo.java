@@ -6,11 +6,11 @@ import android.location.Location;
 
 public class Photo {
 
-	final Location location;
+	final CustomLocation location;
 	final File file;
 
 	Photo(Location location, File file) {
-		this.location = location;
+		this.location = new CustomLocation(location);
 		this.file = file;
 	}
 }

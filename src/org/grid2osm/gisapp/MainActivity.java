@@ -107,7 +107,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
 	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
-	private ArrayList<Location> locationTrace;
+	private ArrayList<CustomLocation> locationTrace;
 	private Boolean locationTraceEnabled;
 
 	// Attributes used by the REST client
@@ -222,7 +222,7 @@ public class MainActivity extends ActionBarActivity implements
 		rootView.setBackgroundColor(Color.WHITE);
 		imageViewPhoto = null;
 		poiPhotos = new ArrayList<Photo>();
-		locationTrace = new ArrayList<Location>();
+		locationTrace = new ArrayList<CustomLocation>();
 	}
 
 	// Create a file for saving the photo
@@ -484,7 +484,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Initialize the trace
 		if (locationTrace == null) {
-			locationTrace = new ArrayList<Location>();
+			locationTrace = new ArrayList<CustomLocation>();
 		}
 	}
 
@@ -666,7 +666,8 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	public void onLocationChanged(Location location) {
 		if (locationTraceEnabled != null && locationTraceEnabled) {
-			locationTrace.add(location);
+			CustomLocation customLocation = new CustomLocation(location);
+			locationTrace.add(customLocation);
 		}
 	}
 
@@ -928,78 +929,78 @@ public class MainActivity extends ActionBarActivity implements
 			Poi poi = pois.get(0);
 			int index = 0;
 
-			for (Location location : poi.locationTrace) {
-				if (location.hasAccuracy()) {
+			for (CustomLocation location : poi.locationTrace) {
+				if (location.accuracy != null) {
 					data.addPart(
 							"trace_" + index + "_accuracy",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAccuracy())));
+									.valueOf(location.accuracy)));
 				}
-				if (location.hasAltitude()) {
+				if (location.altitude != null) {
 					data.addPart(
 							"trace_" + index + "_altitude",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAltitude())));
+									.valueOf(location.altitude)));
 				}
-				if (location.hasBearing()) {
+				if (location.bearing != null) {
 					data.addPart(
 							"trace_" + index + "_bearing",
 							new TransferProgressTypedString(String
-									.valueOf(location.getBearing())));
+									.valueOf(location.bearing)));
 				}
 				data.addPart(
 						"trace_" + index + "_latitude",
 						new TransferProgressTypedString(String.valueOf(location
-								.getLatitude())));
+								.latitude)));
 				data.addPart(
 						"trace_" + index + "_longitude",
 						new TransferProgressTypedString(String.valueOf(location
-								.getLongitude())));
+								.longitude)));
 				data.addPart("trace_" + index + "_provider",
-						new TransferProgressTypedString(location.getProvider()));
+						new TransferProgressTypedString(location.provider));
 				data.addPart(
 						"trace_" + index + "_time",
 						new TransferProgressTypedString(String.valueOf(location
-								.getTime())));
+								.time)));
 				index++;
 			}
 			index = 0;
 
 			for (Photo photo : poi.photos) {
-				Location location = photo.location;
+				CustomLocation location = photo.location;
 
-				if (location.hasAccuracy()) {
+				if (location.accuracy != null) {
 					data.addPart(
 							"photo_" + index + "_accuracy",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAccuracy())));
+									.valueOf(location.accuracy)));
 				}
-				if (location.hasAltitude()) {
+				if (location.altitude != null) {
 					data.addPart(
 							"photo_" + index + "_altitude",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAltitude())));
+									.valueOf(location.altitude)));
 				}
-				if (location.hasBearing()) {
+				if (location.bearing != null) {
 					data.addPart(
 							"photo_" + index + "_bearing",
 							new TransferProgressTypedString(String
-									.valueOf(location.getBearing())));
+									.valueOf(location.bearing)));
 				}
 				data.addPart(
 						"photo_" + index + "_latitude",
 						new TransferProgressTypedString(String.valueOf(location
-								.getLatitude())));
+								.latitude)));
 				data.addPart(
 						"photo_" + index + "_longitude",
 						new TransferProgressTypedString(String.valueOf(location
-								.getLongitude())));
+								.longitude)));
 				data.addPart("photo_" + index + "_provider",
-						new TransferProgressTypedString(location.getProvider()));
+						new TransferProgressTypedString(location.provider));
 				data.addPart(
 						"photo_" + index + "_time",
 						new TransferProgressTypedString(String.valueOf(location
-								.getTime())));
+								.time)));
 
 				String photoFileUri = Uri.fromFile(photo.file).toString();
 				String mimeType = null;

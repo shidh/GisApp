@@ -1,6 +1,5 @@
 package org.grid2osm.gisapp;
 
-import java.io.File;
 import java.util.ArrayList;
 
 import android.app.Fragment;
@@ -18,7 +17,7 @@ public class RetainedFragment extends Fragment {
 	 * retain simple attributes, use the SharedPreferences.
 	 */
 	private Photo imageViewPhoto;
-	private ArrayList<Location> locationTrace;
+	private ArrayList<CustomLocation> locationTrace;
 	private ArrayList<Photo> poiPhotos;
 	private ArrayList<Poi> pois;
 
@@ -26,7 +25,7 @@ public class RetainedFragment extends Fragment {
 		return imageViewPhoto;
 	}
 
-	public ArrayList<Location> getLocationTrace() {
+	public ArrayList<CustomLocation> getLocationTrace() {
 		return locationTrace;
 	}
 
@@ -50,7 +49,7 @@ public class RetainedFragment extends Fragment {
 		this.imageViewPhoto = imageViewPhoto;
 	}
 
-	public void setLocationTrace(ArrayList<Location> locationTrace) {
+	public void setLocationTrace(ArrayList<CustomLocation> locationTrace) {
 		this.locationTrace = locationTrace;
 	}
 
