@@ -84,6 +84,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
 	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
 	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
+	private static final String STORAGE_IMAGEVIEWINDEX = "org.grid2osm.gisapp.imageViewIndex";
 	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
 	private static final String STORAGE_PHOTOFILEPATH = "org.grid2osm.gisapp.photoFilePath";
 	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
@@ -131,7 +132,7 @@ public class MainActivity extends ActionBarActivity implements
 	private String photoFilePath;
 
 	// Current photo on the imageView
-	private Photo imageViewPhoto;
+	private int imageViewIndex;
 
 	// Users's Google mail address
 	private String gMail;
@@ -183,10 +184,10 @@ public class MainActivity extends ActionBarActivity implements
 
 		Photo photo = new Photo(location, new File(photoFilePath));
 
-		imageViewPhoto = photo;
-
 		// Add the photo to the list
 		poiPhotos.add(photo);
+		
+		imageViewIndex = poiPhotos.indexOf(photo);
 
 		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
@@ -220,7 +221,7 @@ public class MainActivity extends ActionBarActivity implements
 		previewTextView.setVisibility(View.VISIBLE);
 		sendTextView.setVisibility(View.VISIBLE);
 		rootView.setBackgroundColor(Color.WHITE);
-		imageViewPhoto = null;
+		imageViewIndex = 0;
 		poiPhotos = new ArrayList<Photo>();
 		locationTrace = new ArrayList<CustomLocation>();
 	}
@@ -613,10 +614,10 @@ public class MainActivity extends ActionBarActivity implements
 				if (poiPhotos.size() == 1) {
 					clearImageView();
 				} else {
-					Photo tempImageViewPhoto = imageViewPhoto;
+					Photo imageViewPhoto = poiPhotos.get(imageViewIndex);
 					setupImageView(true);
-					if (tempImageViewPhoto != null) {
-						poiPhotos.remove(tempImageViewPhoto);
+					if (imageViewPhoto != null) {
+						poiPhotos.remove(imageViewPhoto);
 					}
 				}
 			}
@@ -813,6 +814,9 @@ public class MainActivity extends ActionBarActivity implements
 		if (storagePrefs.contains(STORAGE_GTOKEN)) {
 			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
 		}
+		if (storagePrefs.contains(STORAGE_IMAGEVIEWINDEX)) {
+			imageViewIndex = storagePrefs.getInt(STORAGE_IMAGEVIEWINDEX, 0);
+		}
 		if (storagePrefs.contains(STORAGE_LOCATIONTRACEENABLED)) {
 			locationTraceEnabled = storagePrefs.getBoolean(
 					STORAGE_LOCATIONTRACEENABLED, false);
@@ -848,7 +852,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		poiPhotos = retainedFragment.getPoiPhotos();
 		pois = retainedFragment.getPois();
-		imageViewPhoto = retainedFragment.getImageViewPhoto();
 		locationTrace = retainedFragment.getLocationTrace();
 	}
 
@@ -879,6 +882,7 @@ public class MainActivity extends ActionBarActivity implements
 		if (gToken != null) {
 			storageEditor.putString(STORAGE_GTOKEN, gToken);
 		}
+		storageEditor.putInt(STORAGE_IMAGEVIEWINDEX, imageViewIndex);
 		if (locationTraceEnabled != null) {
 			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
 					locationTraceEnabled);
@@ -910,7 +914,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		retainedFragment.setPoiPhotos(poiPhotos);
 		retainedFragment.setPois(pois);
-		retainedFragment.setImageViewPhoto(imageViewPhoto);
 		retainedFragment.setLocationTrace(locationTrace);
 	}
 
@@ -1024,13 +1027,12 @@ public class MainActivity extends ActionBarActivity implements
 	private void setupImageView(boolean choosePreviousPhoto) {
 		if (poiPhotos != null && !poiPhotos.isEmpty()) {
 			int newIndex;
-			if (choosePreviousPhoto && imageViewPhoto != null
-					&& poiPhotos.indexOf(imageViewPhoto) > 0) {
-				newIndex = poiPhotos.indexOf(imageViewPhoto) - 1;
+			if (choosePreviousPhoto && imageViewIndex > 0) {
+				newIndex = imageViewIndex - 1;
 			} else {
 				newIndex = poiPhotos.size() - 1;
 			}
-			imageViewPhoto = poiPhotos.get(newIndex);
+			Photo imageViewPhoto = poiPhotos.get(newIndex);
 			cameraTextView.setVisibility(View.GONE);
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
@@ -1038,6 +1040,7 @@ public class MainActivity extends ActionBarActivity implements
 			Uri photoUri = Uri.fromFile(imageViewPhoto.file);
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
+			imageViewIndex = newIndex;
 		} else {
 			rootView.setBackgroundColor(Color.WHITE);
 		}
