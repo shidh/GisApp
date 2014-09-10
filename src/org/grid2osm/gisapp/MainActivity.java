@@ -4,9 +4,11 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.DaoMaster.DevOpenHelper;
 import org.grid2osm.gisapp.AsyncTask.CheckTokenTask;
 import org.grid2osm.gisapp.AsyncTask.GetTokenTask;
 import org.grid2osm.gisapp.AsyncTask.SendDataTask;
@@ -40,15 +42,14 @@ import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 
+import de.greenrobot.dao.identityscope.IdentityScopeType;
 import de.greenrobot.event.EventBus;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
@@ -77,24 +78,6 @@ import android.widget.Toast;
 public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener {
-
-	// Attributes for persistent storage
-	private static final String STORAGE_ACCOUNTPICKERISOPEN = "org.grid2osm.gisapp.accountPickerIsOpen";
-	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
-	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
-	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
-	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
-	private static final String STORAGE_IMAGEVIEWINDEX = "org.grid2osm.gisapp.imageViewIndex";
-	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
-	private static final String STORAGE_PHOTOFILEPATH = "org.grid2osm.gisapp.photoFilePath";
-	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
-	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
-	private static final String STORAGE_PROGRESSCIRCLEVISIBILITY = "org.grid2osm.gisapp.progressCircle.visibility";
-	private static final String STORAGE_RESUMESEND = "org.grid2osm.gisapp.resumeSend";
-	private static final String STORAGE_TAKEANOTHERPHOTO = "org.grid2osm.gisapp.takeAnotherPhoto";
-	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
-	private Editor storageEditor;
-	private SharedPreferences storagePrefs;
 
 	// Attributes for starting the intent and used by onActivityResult
 	private static final int INTENT_ENABLE_GPS = 1000;
@@ -151,9 +134,6 @@ public class MainActivity extends ActionBarActivity implements
 	// The view where all GUI items are placed on.
 	private View rootView;
 
-	// Fragment used to retain complex objects
-	private RetainedFragment retainedFragment;
-
 	/*
 	 * If the activity was registered in onCreate(), don't register in
 	 * onResume();
@@ -186,7 +166,7 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Add the photo to the list
 		poiPhotos.add(photo);
-		
+
 		imageViewIndex = poiPhotos.indexOf(photo);
 
 		// Add the photo to the gallery
@@ -236,7 +216,8 @@ public class MainActivity extends ActionBarActivity implements
 					+ timeStamp;
 			File storageDir = Environment
 					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-			photoFilePath = new File(storageDir.getPath(), photoFileName + ".jpg").getPath();
+			photoFilePath = new File(storageDir.getPath(), photoFileName
+					+ ".jpg").getPath();
 		} catch (Exception e) {
 			Toast.makeText(this, R.string.problem_create_file,
 					Toast.LENGTH_LONG).show();
@@ -300,37 +281,6 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			}
 		});
-	}
-
-	private void initPrimitiveStorage() {
-
-		if (storagePrefs == null) {
-			// Open Shared Preferences
-			storagePrefs = getSharedPreferences(STORAGE_PREFS,
-					Context.MODE_PRIVATE);
-
-			// Get an editor
-			storageEditor = storagePrefs.edit();
-		} else if (storageEditor == null) {
-			// Get an editor
-			storageEditor = storagePrefs.edit();
-		}
-	}
-
-	private void initRetainedFragment() {
-
-		// Find the retained fragment on activity restarts
-		FragmentManager fragmentManager = getFragmentManager();
-		retainedFragment = (RetainedFragment) fragmentManager
-				.findFragmentByTag("data");
-
-		// Create the fragment and data the first time
-		if (retainedFragment == null) {
-			// add the fragment
-			retainedFragment = new RetainedFragment();
-			fragmentManager.beginTransaction().add(retainedFragment, "data")
-					.commit();
-		}
 	}
 
 	// Checks whether the device currently has a network connection
@@ -435,11 +385,38 @@ public class MainActivity extends ActionBarActivity implements
 		finish();
 	}
 
+	private SQLiteDatabase db;
+	private DaoMaster daoMaster;
+	private DaoSession daoSession;
+	private LocationEntityDao locationEntityDao;
+	private LocationTraceEntityDao locationTraceEntityDao;
+	private PhotoEntityDao photoEntityDao;
+	private PhotosEntityDao photosEntityDao;
+	private PoiEntityDao poiEntityDao;
+	private PrimitiveAttributesEntityDao primitiveAttributesEntityDao;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		File dbPath = new File(Environment.getExternalStorageDirectory()
+				.getPath() + File.separator + getString(R.string.app_name));
+		if (!dbPath.exists()) {
+			dbPath.mkdirs();
+		}
+		db = SQLiteDatabase.openOrCreateDatabase(new File(dbPath.getPath(),
+				"opendao.sqlite"), null);
+		daoMaster = new DaoMaster(db);
+		daoSession = daoMaster.newSession();
+		locationEntityDao = daoSession.getLocationEntityDao();
+		locationTraceEntityDao = daoSession.getLocationTraceEntityDao();
+		photoEntityDao = daoSession.getPhotoEntityDao();
+		photosEntityDao = daoSession.getPhotosEntityDao();
+		poiEntityDao = daoSession.getPoiEntityDao();
+		primitiveAttributesEntityDao = daoSession
+				.getPrimitiveAttributesEntityDao();
 
 		// Initialize the views
 		imageView = (ImageView) findViewById(R.id.imageView);
@@ -454,12 +431,6 @@ public class MainActivity extends ActionBarActivity implements
 		EventBus.getDefault().register(this);
 		skipRegisterOnNextResume = true;
 
-		// Restore complex objects
-		restoreRetainedObjects();
-
-		// Restore primitive attributes
-		restorePrimitiveAttributes();
-
 		/*
 		 * Create a new location client, using the enclosing class to handle
 		 * callbacks
@@ -472,20 +443,65 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Initialise the dialogs list
 		dialogs = new ArrayList<DialogFragment>();
+		
+		restoreFromDB();
+	}
+	
+	
+	
+	private void restoreFromDB() {
+		restorePoiFromDB();
+		restorePrimitiveFromDB();
+		
+		DaoMaster.dropAllTables(db, true);
+		DaoMaster.createAllTables(db, true);
+	}
+
+	private void restorePoiFromDB() {
 
 		// Initialize the pois
-		if (pois == null) {
-			pois = new ArrayList<Poi>();
-		}
+		pois = new ArrayList<Poi>();
 
 		// Initialize the poiPhotos
-		if (poiPhotos == null) {
-			poiPhotos = new ArrayList<Photo>();
-		}
+		poiPhotos = new ArrayList<Photo>();
 
 		// Initialize the trace
-		if (poiLocationTrace == null) {
-			poiLocationTrace = new ArrayList<CustomLocation>();
+		poiLocationTrace = new ArrayList<CustomLocation>();
+
+		for (PoiEntity poiEntity : poiEntityDao.loadAll()) {
+
+			ArrayList<CustomLocation> locationTrace = new ArrayList<CustomLocation>();
+			ArrayList<Photo> photos = new ArrayList<Photo>();
+
+			for (LocationEntity locationEntity : poiEntity
+					.getLocationTraceEntity().getLocationEntityList()) {
+				CustomLocation customLocation = new CustomLocation(
+						locationEntity.getAccuracy(),
+						locationEntity.getAltitude(),
+						locationEntity.getBearing(),
+						locationEntity.getLatitude(),
+						locationEntity.getLongitude(),
+						locationEntity.getProvider(), locationEntity.getTime());
+				locationTrace.add(customLocation);
+			}
+
+			for (PhotoEntity photoEntity : poiEntity.getPhotosEntity()
+					.getPhotoEntityList()) {
+				Photo photo = new Photo(photoEntity.getAccuracy(),
+						photoEntity.getAltitude(), photoEntity.getBearing(),
+						photoEntity.getLatitude(), photoEntity.getLongitude(),
+						photoEntity.getProvider(), photoEntity.getTime(),
+						photoEntity.getFilePath());
+				photos.add(photo);
+			}
+
+			if (poiEntity.getDone()) {
+				Poi poi = new Poi(locationTrace, photos);
+				pois.add(poi);
+			} else {
+				poiLocationTrace = locationTrace;
+				poiPhotos = photos;
+			}
 		}
 	}
 
@@ -506,11 +522,60 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onDestroy() {
 		super.onDestroy();
 
-		// Store the data in the fragment
-		saveRetainedObjects();
+		dumpToDB();
+	}
+	
+	private void dumpToDB() {
+		dumpPoiToDB(pois, true);
+		ArrayList<Poi> newPoi = new ArrayList<Poi>();
+		newPoi.add(new Poi(poiLocationTrace, poiPhotos));
+		dumpPoiToDB(newPoi, false);
 
-		// Store primitive data
-		savePrimitiveAttributes();
+		dumpPrimitiveToDB();
+	}
+
+	private void dumpPoiToDB(ArrayList<Poi> allPoi, boolean done) {
+		for (Poi poi : allPoi) {
+			LocationTraceEntity locationTraceEntity = new LocationTraceEntity();
+			locationTraceEntityDao.insert(locationTraceEntity);
+
+			for (CustomLocation location : poi.locationTrace) {
+				LocationEntity locationEntity = new LocationEntity();
+				locationEntity.setAccuracy(location.accuracy);
+				locationEntity.setAltitude(location.altitude);
+				locationEntity.setBearing(location.bearing);
+				locationEntity.setLatitude(location.latitude);
+				locationEntity.setLocationTraceEntityId(locationTraceEntity
+						.getId());
+				locationEntity.setLongitude(location.longitude);
+				locationEntity.setProvider(location.provider);
+				locationEntity.setTime(location.time);
+				locationEntityDao.insert(locationEntity);
+			}
+
+			PhotosEntity photosEntity = new PhotosEntity();
+			photosEntityDao.insert(photosEntity);
+
+			for (Photo photo : poi.photos) {
+				PhotoEntity photoEntity = new PhotoEntity();
+				photoEntity.setAccuracy(photo.accuracy);
+				photoEntity.setAltitude(photo.altitude);
+				photoEntity.setBearing(photo.bearing);
+				photoEntity.setFilePath(photo.filePath);
+				photoEntity.setLatitude(photo.latitude);
+				photoEntity.setLongitude(photo.longitude);
+				photoEntity.setPhotosEntityId(photosEntity.getId());
+				photoEntity.setProvider(photo.provider);
+				photoEntity.setTime(photo.time);
+				photoEntityDao.insert(photoEntity);
+			}
+
+			PoiEntity poiEntity = new PoiEntity();
+			poiEntity.setDone(done);
+			poiEntity.setLocationTraceEntityId(locationTraceEntity.getId());
+			poiEntity.setPhotosEntityId(photosEntity.getId());
+			poiEntityDao.insert(poiEntity);
+		}
 	}
 
 	@Override
@@ -791,68 +856,31 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	private void restorePrimitiveAttributes() {
+	private void restorePrimitiveFromDB() {
 
-		initPrimitiveStorage();
-
-		// Restore simple attributes from persistent storage
-		if (storagePrefs.contains(STORAGE_ACCOUNTPICKERISOPEN)) {
-			accountPickerIsOpen = storagePrefs.getBoolean(
-					STORAGE_ACCOUNTPICKERISOPEN, false);
+		List<PrimitiveAttributesEntity> primitiveAttributesEntities = primitiveAttributesEntityDao
+				.loadAll();
+		if (primitiveAttributesEntities.size() == 1) {
+			PrimitiveAttributesEntity primitiveAttributes = primitiveAttributesEntities
+					.get(0);
+			accountPickerIsOpen = primitiveAttributes.getAccountPickerIsOpen();
+			accumulatedTransferSize = primitiveAttributes
+					.getAccumulatedTransferSize();
+			gesturesEnabled = primitiveAttributes.getGesturesEnabled();
+			gMail = primitiveAttributes.getGMail();
+			gToken = primitiveAttributes.getGMail();
+			imageViewIndex = primitiveAttributes.getImageViewIndex();
+			locationTraceEnabled = primitiveAttributes
+					.getLocationTraceEnabled();
+			photoFilePath = primitiveAttributes.getPhotoFilePath();
+			progressBar.setVisibility(primitiveAttributes.getProgressBar());
+			progressCircle.setVisibility(primitiveAttributes
+					.getProgressCircle());
+			resumeSend = primitiveAttributes.getResumeSend();
+			takeAnotherPhoto = primitiveAttributes.getTakeAnotherPhoto();
+			totalTransferSize = primitiveAttributes.getTotalTransferSize();
+			primitiveAttributesEntityDao.deleteAll();
 		}
-		if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
-			accumulatedTransferSize = storagePrefs.getLong(
-					STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
-		}
-		if (storagePrefs.contains(STORAGE_GESTURESENABLED)) {
-			gesturesEnabled = storagePrefs.getBoolean(STORAGE_GESTURESENABLED,
-					true);
-		}
-		if (storagePrefs.contains(STORAGE_GMAIL)) {
-			gMail = storagePrefs.getString(STORAGE_GMAIL, null);
-		}
-		if (storagePrefs.contains(STORAGE_GTOKEN)) {
-			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
-		}
-		if (storagePrefs.contains(STORAGE_IMAGEVIEWINDEX)) {
-			imageViewIndex = storagePrefs.getInt(STORAGE_IMAGEVIEWINDEX, 0);
-		}
-		if (storagePrefs.contains(STORAGE_LOCATIONTRACEENABLED)) {
-			locationTraceEnabled = storagePrefs.getBoolean(
-					STORAGE_LOCATIONTRACEENABLED, false);
-		}
-		if (storagePrefs.contains(STORAGE_PHOTOFILEPATH)) {
-			photoFilePath = storagePrefs.getString(STORAGE_PHOTOFILEPATH, null);
-		}
-		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
-			progressBar.setVisibility(storagePrefs.getInt(
-					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
-		}
-		if (storagePrefs.contains(STORAGE_PROGRESSCIRCLEVISIBILITY)) {
-			progressCircle.setVisibility(storagePrefs.getInt(
-					STORAGE_PROGRESSCIRCLEVISIBILITY, View.GONE));
-		}
-		if (storagePrefs.contains(STORAGE_RESUMESEND)) {
-			resumeSend = storagePrefs.getBoolean(STORAGE_RESUMESEND, false);
-		}
-		if (storagePrefs.contains(STORAGE_TAKEANOTHERPHOTO)) {
-			takeAnotherPhoto = storagePrefs.getBoolean(STORAGE_TAKEANOTHERPHOTO, false);
-		}
-		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
-			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
-					0L);
-		}
-	}
-
-	private void restoreRetainedObjects() {
-
-		if (retainedFragment == null) {
-			initRetainedFragment();
-		}
-
-		poiPhotos = retainedFragment.getPoiPhotos();
-		pois = retainedFragment.getPois();
-		poiLocationTrace = retainedFragment.getPoiLocationTrace();
 	}
 
 	private void savePoi() {
@@ -861,60 +889,25 @@ public class MainActivity extends ActionBarActivity implements
 		clearImageView();
 	}
 
-	private void savePrimitiveAttributes() {
+	private void dumpPrimitiveToDB() {
 
-		initPrimitiveStorage();
-
-		if (accountPickerIsOpen != null) {
-			storageEditor.putBoolean(STORAGE_ACCOUNTPICKERISOPEN,
-					accountPickerIsOpen);
-		}
-		if (accumulatedTransferSize != null) {
-			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
-					accumulatedTransferSize);
-		}
-		if (gesturesEnabled != null) {
-			storageEditor.putBoolean(STORAGE_GESTURESENABLED, gesturesEnabled);
-		}
-		if (gMail != null) {
-			storageEditor.putString(STORAGE_GMAIL, gMail);
-		}
-		if (gToken != null) {
-			storageEditor.putString(STORAGE_GTOKEN, gToken);
-		}
-		storageEditor.putInt(STORAGE_IMAGEVIEWINDEX, imageViewIndex);
-		if (locationTraceEnabled != null) {
-			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
-					locationTraceEnabled);
-		}
-		if (photoFilePath != null) {
-			storageEditor.putString(STORAGE_PHOTOFILEPATH, photoFilePath);
-		}
-		if (resumeSend != null) {
-			storageEditor.putBoolean(STORAGE_RESUMESEND, resumeSend);
-		}
-		storageEditor.putInt(STORAGE_PROGRESSBARVISIBILITY,
-				progressBar.getVisibility());
-		storageEditor.putInt(STORAGE_PROGRESSCIRCLEVISIBILITY,
-				progressCircle.getVisibility());
-		if (takeAnotherPhoto != null) {
-			storageEditor.putBoolean(STORAGE_TAKEANOTHERPHOTO, takeAnotherPhoto);
-		}
-		if (totalTransferSize != null) {
-			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
-		}
-		storageEditor.commit();
-	}
-
-	private void saveRetainedObjects() {
-
-		if (retainedFragment == null) {
-			initRetainedFragment();
-		}
-
-		retainedFragment.setPoiPhotos(poiPhotos);
-		retainedFragment.setPois(pois);
-		retainedFragment.setPoiLocationTrace(poiLocationTrace);
+		PrimitiveAttributesEntity primitiveAttributesEntity = new PrimitiveAttributesEntity();
+		primitiveAttributesEntity.setAccountPickerIsOpen(accountPickerIsOpen);
+		primitiveAttributesEntity
+				.setAccumulatedTransferSize(accumulatedTransferSize);
+		primitiveAttributesEntity.setGesturesEnabled(gesturesEnabled);
+		primitiveAttributesEntity.setGMail(gMail);
+		primitiveAttributesEntity.setGToken(gToken);
+		primitiveAttributesEntity.setImageViewIndex(imageViewIndex);
+		primitiveAttributesEntity.setLocationTraceEnabled(locationTraceEnabled);
+		primitiveAttributesEntity.setPhotoFilePath(photoFilePath);
+		primitiveAttributesEntity.setProgressBar(progressBar.getVisibility());
+		primitiveAttributesEntity.setProgressCircle(progressCircle
+				.getVisibility());
+		primitiveAttributesEntity.setResumeSend(resumeSend);
+		primitiveAttributesEntity.setTakeAnotherPhoto(takeAnotherPhoto);
+		primitiveAttributesEntity.setTotalTransferSize(totalTransferSize);
+		primitiveAttributesEntityDao.insert(primitiveAttributesEntity);
 	}
 
 	// Send the data to the backend server
@@ -953,18 +946,18 @@ public class MainActivity extends ActionBarActivity implements
 				}
 				data.addPart(
 						"trace_" + index + "_latitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.latitude)));
+						new TransferProgressTypedString(String
+								.valueOf(location.latitude)));
 				data.addPart(
 						"trace_" + index + "_longitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.longitude)));
+						new TransferProgressTypedString(String
+								.valueOf(location.longitude)));
 				data.addPart("trace_" + index + "_provider",
 						new TransferProgressTypedString(location.provider));
 				data.addPart(
 						"trace_" + index + "_time",
-						new TransferProgressTypedString(String.valueOf(location
-								.time)));
+						new TransferProgressTypedString(String
+								.valueOf(location.time)));
 				index++;
 			}
 			index = 0;
@@ -991,20 +984,21 @@ public class MainActivity extends ActionBarActivity implements
 				}
 				data.addPart(
 						"photo_" + index + "_latitude",
-						new TransferProgressTypedString(String.valueOf(photo
-								.latitude)));
+						new TransferProgressTypedString(String
+								.valueOf(photo.latitude)));
 				data.addPart(
 						"photo_" + index + "_longitude",
-						new TransferProgressTypedString(String.valueOf(photo
-								.longitude)));
+						new TransferProgressTypedString(String
+								.valueOf(photo.longitude)));
 				data.addPart("photo_" + index + "_provider",
 						new TransferProgressTypedString(photo.provider));
 				data.addPart(
 						"photo_" + index + "_time",
-						new TransferProgressTypedString(String.valueOf(photo
-								.time)));
+						new TransferProgressTypedString(String
+								.valueOf(photo.time)));
 
-				String photoFileUri = Uri.fromFile(new File(photo.filePath)).toString();
+				String photoFileUri = Uri.fromFile(new File(photo.filePath))
+						.toString();
 				String mimeType = null;
 				String extension = MimeTypeMap
 						.getFileExtensionFromUrl(photoFileUri);

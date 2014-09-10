@@ -12,6 +12,17 @@ public class CustomLocation {
 	final String provider;
 	final long time;
 
+	public CustomLocation(Float accuracy, Double altitude, Float bearing,
+			double latitude, double longitude, String provider, long time) {
+		this.accuracy = accuracy;
+		this.altitude = altitude;
+		this.bearing = bearing;
+		this.latitude = latitude;
+		this.longitude = longitude;
+		this.provider = provider;
+		this.time = time;
+	}
+
 	public CustomLocation(Location location) {
 		if (location.hasAccuracy()) {
 			this.accuracy = location.getAccuracy();

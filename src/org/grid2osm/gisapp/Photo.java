@@ -12,6 +12,19 @@ public class Photo {
 	final String provider;
 	final long time;
 	final String filePath;
+	
+	public Photo(Float accuracy, Double altitude, Float bearing,
+			double latitude, double longitude, String provider, long time,
+			String filePath) {
+		this.accuracy = accuracy;
+		this.altitude = altitude;
+		this.bearing = bearing;
+		this.latitude = latitude;
+		this.longitude = longitude;
+		this.provider = provider;
+		this.time = time;
+		this.filePath = filePath;
+	}
 
 	Photo(Location location, String filePath) {
 		if (location.hasAccuracy()) {
