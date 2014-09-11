@@ -2,7 +2,7 @@ package org.grid2osm.gisapp;
 
 import android.location.Location;
 
-public class Photo {
+public class CustomLocation {
 
 	final Float accuracy;
 	final Double altitude;
@@ -11,11 +11,9 @@ public class Photo {
 	final double longitude;
 	final String provider;
 	final long time;
-	final String filePath;
 
-	public Photo(Float accuracy, Double altitude, Float bearing,
-			double latitude, double longitude, String provider, long time,
-			String filePath) {
+	public CustomLocation(Float accuracy, Double altitude, Float bearing,
+			double latitude, double longitude, String provider, long time) {
 		this.accuracy = accuracy;
 		this.altitude = altitude;
 		this.bearing = bearing;
@@ -23,10 +21,9 @@ public class Photo {
 		this.longitude = longitude;
 		this.provider = provider;
 		this.time = time;
-		this.filePath = filePath;
 	}
 
-	Photo(Location location, String filePath) {
+	public CustomLocation(Location location) {
 		if (location.hasAccuracy()) {
 			this.accuracy = location.getAccuracy();
 		} else {
@@ -46,6 +43,5 @@ public class Photo {
 		this.longitude = location.getLongitude();
 		this.provider = location.getProvider();
 		this.time = location.getTime();
-		this.filePath = filePath;
 	}
 }

@@ -4,9 +4,11 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.http.HttpStatus;
+import org.grid2osm.gisapp.DaoMaster.DevOpenHelper;
 import org.grid2osm.gisapp.AsyncTask.CheckTokenTask;
 import org.grid2osm.gisapp.AsyncTask.GetTokenTask;
 import org.grid2osm.gisapp.AsyncTask.SendDataTask;
@@ -44,11 +46,9 @@ import de.greenrobot.event.EventBus;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
@@ -78,22 +78,6 @@ public class MainActivity extends ActionBarActivity implements
 		LocationListener, GooglePlayServicesClient.ConnectionCallbacks,
 		GooglePlayServicesClient.OnConnectionFailedListener {
 
-	// Attributes for persistent storage
-	private static final String STORAGE_ACCOUNTPICKERISOPEN = "org.grid2osm.gisapp.accountPickerIsOpen";
-	private static final String STORAGE_ACCUMULATEDTRANSFERSIZE = "org.grid2osm.gisapp.accumulatedTransferSize";
-	private static final String STORAGE_GESTURESENABLED = "org.grid2osm.gisapp.gesturesEnabled";
-	private static final String STORAGE_GMAIL = "org.grid2osm.gisapp.gMail";
-	private static final String STORAGE_GTOKEN = "org.grid2osm.gisapp.gToken";
-	private static final String STORAGE_LOCATIONTRACEENABLED = "org.grid2osm.gisapp.locationTraceEnabled";
-	private static final String STORAGE_PREFS = "org.grid2osm.gisapp.storagePrefs";
-	private static final String STORAGE_PROGRESSBARVISIBILITY = "org.grid2osm.gisapp.progressBar.visibility";
-	private static final String STORAGE_PROGRESSCIRCLEVISIBILITY = "org.grid2osm.gisapp.progressCircle.visibility";
-	private static final String STORAGE_RESUMESEND = "org.grid2osm.gisapp.resumeSend";
-	private static final String STORAGE_TAKEANOTHERPHOTO = "org.grid2osm.gisapp.takeAnotherPhoto";
-	private static final String STORAGE_TOTALTRANSFERSIZE = "org.grid2osm.gisapp.totalTransferSize";
-	private Editor storageEditor;
-	private SharedPreferences storagePrefs;
-
 	// Attributes for starting the intent and used by onActivityResult
 	private static final int INTENT_ENABLE_GPS = 1000;
 	private static final int INTENT_ENABLE_NET = 1001;
@@ -106,7 +90,7 @@ public class MainActivity extends ActionBarActivity implements
 	private static final int LOCALIZATION_UPPER_LIMIT = 5000;
 	private static final int LOCALIZATION_LOWER_LIMIT = 1000;
 	private LocationClient locationClient;
-	private ArrayList<Location> locationTrace;
+	private ArrayList<CustomLocation> poiLocationTrace;
 	private Boolean locationTraceEnabled;
 
 	// Attributes used by the REST client
@@ -127,10 +111,10 @@ public class MainActivity extends ActionBarActivity implements
 
 	// The photo file where the camera stores the taken photo temporarily to
 	// create an entry in "poiPhotos"
-	private File photoFile;
+	private String photoFilePath;
 
 	// Current photo on the imageView
-	private Photo imageViewPhoto;
+	private int imageViewIndex;
 
 	// Users's Google mail address
 	private String gMail;
@@ -148,9 +132,6 @@ public class MainActivity extends ActionBarActivity implements
 
 	// The view where all GUI items are placed on.
 	private View rootView;
-
-	// Fragment used to retain complex objects
-	private RetainedFragment retainedFragment;
 
 	/*
 	 * If the activity was registered in onCreate(), don't register in
@@ -175,22 +156,34 @@ public class MainActivity extends ActionBarActivity implements
 	// Resume sending after refreshing the Google token
 	private Boolean resumeSend;
 
+	// sqlite attributes
+	private SQLiteDatabase db;
+	private DaoMaster daoMaster;
+	private DaoSession daoSession;
+	private LocationEntitiesDao locationEntitiesDao;
+	private LocationEntityDao locationEntityDao;
+	private PhotoEntitiesDao photoEntitiesDao;
+	private PhotoEntityDao photoEntityDao;
+	private PoiEntitiesDao poiEntitiesDao;
+	private PoiEntityDao poiEntityDao;
+	private PrimitiveAttributesEntityDao primitiveAttributesEntityDao;
+
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 
 		Location location = locationClient.getLastLocation();
 
-		Photo photo = new Photo(location, photoFile);
-
-		imageViewPhoto = photo;
+		Photo photo = new Photo(location, photoFilePath);
 
 		// Add the photo to the list
 		poiPhotos.add(photo);
 
+		imageViewIndex = poiPhotos.indexOf(photo);
+
 		// Add the photo to the gallery
 		Intent mediaScanIntent = new Intent(
 				Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-		Uri contentUri = Uri.fromFile(photo.file);
+		Uri contentUri = Uri.fromFile(new File(photo.filePath));
 		mediaScanIntent.setData(contentUri);
 		this.sendBroadcast(mediaScanIntent);
 	}
@@ -219,9 +212,9 @@ public class MainActivity extends ActionBarActivity implements
 		previewTextView.setVisibility(View.VISIBLE);
 		sendTextView.setVisibility(View.VISIBLE);
 		rootView.setBackgroundColor(Color.WHITE);
-		imageViewPhoto = null;
+		imageViewIndex = 0;
 		poiPhotos = new ArrayList<Photo>();
-		locationTrace = new ArrayList<Location>();
+		poiLocationTrace = new ArrayList<CustomLocation>();
 	}
 
 	// Create a file for saving the photo
@@ -234,11 +227,91 @@ public class MainActivity extends ActionBarActivity implements
 					+ timeStamp;
 			File storageDir = Environment
 					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-			photoFile = new File(storageDir.getPath(), photoFileName + ".jpg");
+			photoFilePath = new File(storageDir.getPath(), photoFileName
+					+ ".jpg").getPath();
 		} catch (Exception e) {
 			Toast.makeText(this, R.string.problem_create_file,
 					Toast.LENGTH_LONG).show();
 		}
+	}
+
+	private void dumpPoiToDB(PoiEntities poiEntities, ArrayList<Poi> allPoi,
+			boolean done) {
+
+		for (Poi poi : allPoi) {
+			LocationEntities locationEntities = new LocationEntities();
+			locationEntitiesDao.insert(locationEntities);
+
+			for (CustomLocation location : poi.locationTrace) {
+				LocationEntity locationEntity = new LocationEntity();
+				locationEntity.setAccuracy(location.accuracy);
+				locationEntity.setAltitude(location.altitude);
+				locationEntity.setBearing(location.bearing);
+				locationEntity.setLatitude(location.latitude);
+				locationEntity.setLocationEntitiesId(locationEntities.getId());
+				locationEntity.setLongitude(location.longitude);
+				locationEntity.setProvider(location.provider);
+				locationEntity.setTime(location.time);
+				locationEntityDao.insert(locationEntity);
+			}
+
+			PhotoEntities photoEntities = new PhotoEntities();
+			photoEntitiesDao.insert(photoEntities);
+
+			for (Photo photo : poi.photos) {
+				PhotoEntity photoEntity = new PhotoEntity();
+				photoEntity.setAccuracy(photo.accuracy);
+				photoEntity.setAltitude(photo.altitude);
+				photoEntity.setBearing(photo.bearing);
+				photoEntity.setFilePath(photo.filePath);
+				photoEntity.setLatitude(photo.latitude);
+				photoEntity.setLongitude(photo.longitude);
+				photoEntity.setPhotoEntitiesId(photoEntities.getId());
+				photoEntity.setProvider(photo.provider);
+				photoEntity.setTime(photo.time);
+				photoEntityDao.insert(photoEntity);
+			}
+
+			PoiEntity poiEntity = new PoiEntity();
+			poiEntity.setDone(done);
+			poiEntity.setPoiEntitiesId(poiEntities.getId());
+			poiEntity.setLocationEntitiesId(locationEntities.getId());
+			poiEntity.setPhotoEntitiesId(photoEntities.getId());
+			poiEntityDao.insert(poiEntity);
+		}
+	}
+
+	private void dumpPrimitiveToDB() {
+
+		PrimitiveAttributesEntity primitiveAttributesEntity = new PrimitiveAttributesEntity();
+		primitiveAttributesEntity.setAccountPickerIsOpen(accountPickerIsOpen);
+		primitiveAttributesEntity
+				.setAccumulatedTransferSize(accumulatedTransferSize);
+		primitiveAttributesEntity.setGesturesEnabled(gesturesEnabled);
+		primitiveAttributesEntity.setGMail(gMail);
+		primitiveAttributesEntity.setGToken(gToken);
+		primitiveAttributesEntity.setImageViewIndex(imageViewIndex);
+		primitiveAttributesEntity.setLocationTraceEnabled(locationTraceEnabled);
+		primitiveAttributesEntity.setPhotoFilePath(photoFilePath);
+		primitiveAttributesEntity.setProgressBar(progressBar.getVisibility());
+		primitiveAttributesEntity.setProgressCircle(progressCircle
+				.getVisibility());
+		primitiveAttributesEntity.setResumeSend(resumeSend);
+		primitiveAttributesEntity.setTakeAnotherPhoto(takeAnotherPhoto);
+		primitiveAttributesEntity.setTotalTransferSize(totalTransferSize);
+		primitiveAttributesEntityDao.insert(primitiveAttributesEntity);
+	}
+
+	private void dumpToDB() {
+		PoiEntities poiEntities = new PoiEntities();
+		poiEntitiesDao.insert(poiEntities);
+
+		dumpPoiToDB(poiEntities, pois, true);
+		ArrayList<Poi> newPoi = new ArrayList<Poi>();
+		newPoi.add(new Poi(poiLocationTrace, poiPhotos));
+		dumpPoiToDB(poiEntities, newPoi, false);
+
+		dumpPrimitiveToDB();
 	}
 
 	/*
@@ -298,37 +371,6 @@ public class MainActivity extends ActionBarActivity implements
 				}
 			}
 		});
-	}
-
-	private void initPrimitiveStorage() {
-
-		if (storagePrefs == null) {
-			// Open Shared Preferences
-			storagePrefs = getSharedPreferences(STORAGE_PREFS,
-					Context.MODE_PRIVATE);
-
-			// Get an editor
-			storageEditor = storagePrefs.edit();
-		} else if (storageEditor == null) {
-			// Get an editor
-			storageEditor = storagePrefs.edit();
-		}
-	}
-
-	private void initRetainedFragment() {
-
-		// Find the retained fragment on activity restarts
-		FragmentManager fragmentManager = getFragmentManager();
-		retainedFragment = (RetainedFragment) fragmentManager
-				.findFragmentByTag("data");
-
-		// Create the fragment and data the first time
-		if (retainedFragment == null) {
-			// add the fragment
-			retainedFragment = new RetainedFragment();
-			fragmentManager.beginTransaction().add(retainedFragment, "data")
-					.commit();
-		}
 	}
 
 	// Checks whether the device currently has a network connection
@@ -439,6 +481,20 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "gisapp-db",
+				null);
+		db = helper.getWritableDatabase();
+		daoMaster = new DaoMaster(db);
+		daoSession = daoMaster.newSession();
+		locationEntitiesDao = daoSession.getLocationEntitiesDao();
+		locationEntityDao = daoSession.getLocationEntityDao();
+		photoEntitiesDao = daoSession.getPhotoEntitiesDao();
+		photoEntityDao = daoSession.getPhotoEntityDao();
+		poiEntitiesDao = daoSession.getPoiEntitiesDao();
+		poiEntityDao = daoSession.getPoiEntityDao();
+		primitiveAttributesEntityDao = daoSession
+				.getPrimitiveAttributesEntityDao();
+
 		// Initialize the views
 		imageView = (ImageView) findViewById(R.id.imageView);
 		cameraTextView = (TextView) findViewById(R.id.camera);
@@ -451,12 +507,6 @@ public class MainActivity extends ActionBarActivity implements
 
 		EventBus.getDefault().register(this);
 		skipRegisterOnNextResume = true;
-
-		// Restore complex objects
-		restoreRetainedObjects();
-
-		// Restore primitive attributes
-		restorePrimitiveAttributes();
 
 		/*
 		 * Create a new location client, using the enclosing class to handle
@@ -471,20 +521,7 @@ public class MainActivity extends ActionBarActivity implements
 		// Initialise the dialogs list
 		dialogs = new ArrayList<DialogFragment>();
 
-		// Initialize the pois
-		if (pois == null) {
-			pois = new ArrayList<Poi>();
-		}
-
-		// Initialize the poiPhotos
-		if (poiPhotos == null) {
-			poiPhotos = new ArrayList<Photo>();
-		}
-
-		// Initialize the trace
-		if (locationTrace == null) {
-			locationTrace = new ArrayList<Location>();
-		}
+		restoreFromDB();
 	}
 
 	@Override
@@ -504,11 +541,7 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onDestroy() {
 		super.onDestroy();
 
-		// Store the data in the fragment
-		saveRetainedObjects();
-
-		// Store primitive data
-		savePrimitiveAttributes();
+		dumpToDB();
 	}
 
 	@Override
@@ -612,10 +645,10 @@ public class MainActivity extends ActionBarActivity implements
 				if (poiPhotos.size() == 1) {
 					clearImageView();
 				} else {
-					Photo tempImageViewPhoto = imageViewPhoto;
+					Photo imageViewPhoto = poiPhotos.get(imageViewIndex);
 					setupImageView(true);
-					if (tempImageViewPhoto != null) {
-						poiPhotos.remove(tempImageViewPhoto);
+					if (imageViewPhoto != null) {
+						poiPhotos.remove(imageViewPhoto);
 					}
 				}
 			}
@@ -665,7 +698,8 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	public void onLocationChanged(Location location) {
 		if (locationTraceEnabled != null && locationTraceEnabled) {
-			locationTrace.add(location);
+			CustomLocation customLocation = new CustomLocation(location);
+			poiLocationTrace.add(customLocation);
 		}
 	}
 
@@ -788,124 +822,105 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
-	private void restorePrimitiveAttributes() {
+	private void restoreFromDB() {
+		restorePoiFromDB();
+		restorePrimitiveFromDB();
+	}
 
-		initPrimitiveStorage();
+	private void restorePoiFromDB() {
 
-		// Restore simple attributes from persistent storage
-		if (storagePrefs.contains(STORAGE_ACCOUNTPICKERISOPEN)) {
-			accountPickerIsOpen = storagePrefs.getBoolean(
-					STORAGE_ACCOUNTPICKERISOPEN, false);
-		}
-		if (storagePrefs.contains(STORAGE_ACCUMULATEDTRANSFERSIZE)) {
-			accumulatedTransferSize = storagePrefs.getLong(
-					STORAGE_ACCUMULATEDTRANSFERSIZE, 0L);
-		}
-		if (storagePrefs.contains(STORAGE_GESTURESENABLED)) {
-			gesturesEnabled = storagePrefs.getBoolean(STORAGE_GESTURESENABLED,
-					true);
-		}
-		if (storagePrefs.contains(STORAGE_GMAIL)) {
-			gMail = storagePrefs.getString(STORAGE_GMAIL, null);
-		}
-		if (storagePrefs.contains(STORAGE_GTOKEN)) {
-			gToken = storagePrefs.getString(STORAGE_GTOKEN, null);
-		}
-		if (storagePrefs.contains(STORAGE_LOCATIONTRACEENABLED)) {
-			locationTraceEnabled = storagePrefs.getBoolean(
-					STORAGE_LOCATIONTRACEENABLED, false);
-		}
-		if (storagePrefs.contains(STORAGE_PROGRESSBARVISIBILITY)) {
-			progressBar.setVisibility(storagePrefs.getInt(
-					STORAGE_PROGRESSBARVISIBILITY, View.GONE));
-		}
-		if (storagePrefs.contains(STORAGE_PROGRESSCIRCLEVISIBILITY)) {
-			progressCircle.setVisibility(storagePrefs.getInt(
-					STORAGE_PROGRESSCIRCLEVISIBILITY, View.GONE));
-		}
-		if (storagePrefs.contains(STORAGE_RESUMESEND)) {
-			resumeSend = storagePrefs.getBoolean(STORAGE_RESUMESEND, false);
-		}
-		if (storagePrefs.contains(STORAGE_TAKEANOTHERPHOTO)) {
-			takeAnotherPhoto = storagePrefs.getBoolean(STORAGE_TAKEANOTHERPHOTO, false);
-		}
-		if (storagePrefs.contains(STORAGE_TOTALTRANSFERSIZE)) {
-			totalTransferSize = storagePrefs.getLong(STORAGE_TOTALTRANSFERSIZE,
-					0L);
+		// Initialize the pois
+		pois = new ArrayList<Poi>();
+
+		// Initialize the poiPhotos
+		poiPhotos = new ArrayList<Photo>();
+
+		// Initialize the trace
+		poiLocationTrace = new ArrayList<CustomLocation>();
+
+		List<PoiEntities> poiEntitiesList = poiEntitiesDao.queryBuilder()
+				.list();
+
+		if (poiEntitiesList.size() > 0) {
+			PoiEntities poiEntities = poiEntitiesList.get(poiEntitiesList
+					.size() - 1);
+
+			for (PoiEntity poiEntity : poiEntities.getPoiEntityList()) {
+
+				ArrayList<CustomLocation> locationTrace = new ArrayList<CustomLocation>();
+				ArrayList<Photo> photos = new ArrayList<Photo>();
+
+				for (LocationEntity locationEntity : poiEntity
+						.getLocationEntities().getLocationEntityList()) {
+					CustomLocation customLocation = new CustomLocation(
+							locationEntity.getAccuracy(),
+							locationEntity.getAltitude(),
+							locationEntity.getBearing(),
+							locationEntity.getLatitude(),
+							locationEntity.getLongitude(),
+							locationEntity.getProvider(),
+							locationEntity.getTime());
+					locationTrace.add(customLocation);
+				}
+
+				for (PhotoEntity photoEntity : poiEntity.getPhotoEntities()
+						.getPhotoEntityList()) {
+					Photo photo = new Photo(photoEntity.getAccuracy(),
+							photoEntity.getAltitude(),
+							photoEntity.getBearing(),
+							photoEntity.getLatitude(),
+							photoEntity.getLongitude(),
+							photoEntity.getProvider(), photoEntity.getTime(),
+							photoEntity.getFilePath());
+					photos.add(photo);
+				}
+
+				if (poiEntity.getDone()) {
+					Poi poi = new Poi(locationTrace, photos);
+					pois.add(poi);
+				} else {
+					poiLocationTrace = locationTrace;
+					poiPhotos = photos;
+				}
+			}
 		}
 	}
 
-	private void restoreRetainedObjects() {
+	private void restorePrimitiveFromDB() {
 
-		if (retainedFragment == null) {
-			initRetainedFragment();
+		List<PrimitiveAttributesEntity> primitiveAttributesEntities = primitiveAttributesEntityDao
+				.queryBuilder().list();
+
+		if (primitiveAttributesEntities.size() > 0) {
+			PrimitiveAttributesEntity primitiveAttributesEntity = primitiveAttributesEntities
+					.get(primitiveAttributesEntities.size() - 1);
+
+			accountPickerIsOpen = primitiveAttributesEntity
+					.getAccountPickerIsOpen();
+			accumulatedTransferSize = primitiveAttributesEntity
+					.getAccumulatedTransferSize();
+			gesturesEnabled = primitiveAttributesEntity.getGesturesEnabled();
+			gMail = primitiveAttributesEntity.getGMail();
+			gToken = primitiveAttributesEntity.getGToken();
+			imageViewIndex = primitiveAttributesEntity.getImageViewIndex();
+			locationTraceEnabled = primitiveAttributesEntity
+					.getLocationTraceEnabled();
+			photoFilePath = primitiveAttributesEntity.getPhotoFilePath();
+			progressBar.setVisibility(primitiveAttributesEntity
+					.getProgressBar());
+			progressCircle.setVisibility(primitiveAttributesEntity
+					.getProgressCircle());
+			resumeSend = primitiveAttributesEntity.getResumeSend();
+			takeAnotherPhoto = primitiveAttributesEntity.getTakeAnotherPhoto();
+			totalTransferSize = primitiveAttributesEntity
+					.getTotalTransferSize();
 		}
-
-		poiPhotos = retainedFragment.getPoiPhotos();
-		pois = retainedFragment.getPois();
-		photoFile = retainedFragment.getPhotoFile();
-		imageViewPhoto = retainedFragment.getImageViewPhoto();
-		locationTrace = retainedFragment.getLocationTrace();
 	}
 
 	private void savePoi() {
-		pois.add(new Poi(locationTrace, poiPhotos));
+		pois.add(new Poi(poiLocationTrace, poiPhotos));
 		updatePoiMenuItemButton();
 		clearImageView();
-	}
-
-	private void savePrimitiveAttributes() {
-
-		initPrimitiveStorage();
-
-		if (accountPickerIsOpen != null) {
-			storageEditor.putBoolean(STORAGE_ACCOUNTPICKERISOPEN,
-					accountPickerIsOpen);
-		}
-		if (accumulatedTransferSize != null) {
-			storageEditor.putLong(STORAGE_ACCUMULATEDTRANSFERSIZE,
-					accumulatedTransferSize);
-		}
-		if (gesturesEnabled != null) {
-			storageEditor.putBoolean(STORAGE_GESTURESENABLED, gesturesEnabled);
-		}
-		if (gMail != null) {
-			storageEditor.putString(STORAGE_GMAIL, gMail);
-		}
-		if (gToken != null) {
-			storageEditor.putString(STORAGE_GTOKEN, gToken);
-		}
-		if (locationTraceEnabled != null) {
-			storageEditor.putBoolean(STORAGE_LOCATIONTRACEENABLED,
-					locationTraceEnabled);
-		}
-		if (resumeSend != null) {
-			storageEditor.putBoolean(STORAGE_RESUMESEND, resumeSend);
-		}
-		storageEditor.putInt(STORAGE_PROGRESSBARVISIBILITY,
-				progressBar.getVisibility());
-		storageEditor.putInt(STORAGE_PROGRESSCIRCLEVISIBILITY,
-				progressCircle.getVisibility());
-		if (takeAnotherPhoto != null) {
-			storageEditor.putBoolean(STORAGE_TAKEANOTHERPHOTO, takeAnotherPhoto);
-		}
-		if (totalTransferSize != null) {
-			storageEditor.putLong(STORAGE_TOTALTRANSFERSIZE, totalTransferSize);
-		}
-		storageEditor.commit();
-	}
-
-	private void saveRetainedObjects() {
-
-		if (retainedFragment == null) {
-			initRetainedFragment();
-		}
-
-		retainedFragment.setPoiPhotos(poiPhotos);
-		retainedFragment.setPois(pois);
-		retainedFragment.setPhotoFile(photoFile);
-		retainedFragment.setImageViewPhoto(imageViewPhoto);
-		retainedFragment.setLocationTrace(locationTrace);
 	}
 
 	// Send the data to the backend server
@@ -923,87 +938,87 @@ public class MainActivity extends ActionBarActivity implements
 			Poi poi = pois.get(0);
 			int index = 0;
 
-			for (Location location : poi.locationTrace) {
-				if (location.hasAccuracy()) {
+			for (CustomLocation location : poi.locationTrace) {
+				if (location.accuracy != null) {
 					data.addPart(
 							"trace_" + index + "_accuracy",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAccuracy())));
+									.valueOf(location.accuracy)));
 				}
-				if (location.hasAltitude()) {
+				if (location.altitude != null) {
 					data.addPart(
 							"trace_" + index + "_altitude",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAltitude())));
+									.valueOf(location.altitude)));
 				}
-				if (location.hasBearing()) {
+				if (location.bearing != null) {
 					data.addPart(
 							"trace_" + index + "_bearing",
 							new TransferProgressTypedString(String
-									.valueOf(location.getBearing())));
+									.valueOf(location.bearing)));
 				}
 				data.addPart(
 						"trace_" + index + "_latitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getLatitude())));
+						new TransferProgressTypedString(String
+								.valueOf(location.latitude)));
 				data.addPart(
 						"trace_" + index + "_longitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getLongitude())));
+						new TransferProgressTypedString(String
+								.valueOf(location.longitude)));
 				data.addPart("trace_" + index + "_provider",
-						new TransferProgressTypedString(location.getProvider()));
+						new TransferProgressTypedString(location.provider));
 				data.addPart(
 						"trace_" + index + "_time",
-						new TransferProgressTypedString(String.valueOf(location
-								.getTime())));
+						new TransferProgressTypedString(String
+								.valueOf(location.time)));
 				index++;
 			}
 			index = 0;
 
 			for (Photo photo : poi.photos) {
-				Location location = photo.location;
 
-				if (location.hasAccuracy()) {
+				if (photo.accuracy != null) {
 					data.addPart(
 							"photo_" + index + "_accuracy",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAccuracy())));
+									.valueOf(photo.accuracy)));
 				}
-				if (location.hasAltitude()) {
+				if (photo.altitude != null) {
 					data.addPart(
 							"photo_" + index + "_altitude",
 							new TransferProgressTypedString(String
-									.valueOf(location.getAltitude())));
+									.valueOf(photo.altitude)));
 				}
-				if (location.hasBearing()) {
+				if (photo.bearing != null) {
 					data.addPart(
 							"photo_" + index + "_bearing",
 							new TransferProgressTypedString(String
-									.valueOf(location.getBearing())));
+									.valueOf(photo.bearing)));
 				}
 				data.addPart(
 						"photo_" + index + "_latitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getLatitude())));
+						new TransferProgressTypedString(String
+								.valueOf(photo.latitude)));
 				data.addPart(
 						"photo_" + index + "_longitude",
-						new TransferProgressTypedString(String.valueOf(location
-								.getLongitude())));
+						new TransferProgressTypedString(String
+								.valueOf(photo.longitude)));
 				data.addPart("photo_" + index + "_provider",
-						new TransferProgressTypedString(location.getProvider()));
+						new TransferProgressTypedString(photo.provider));
 				data.addPart(
 						"photo_" + index + "_time",
-						new TransferProgressTypedString(String.valueOf(location
-								.getTime())));
+						new TransferProgressTypedString(String
+								.valueOf(photo.time)));
 
-				String photoFileUri = Uri.fromFile(photo.file).toString();
+				String photoFileUri = Uri.fromFile(new File(photo.filePath))
+						.toString();
 				String mimeType = null;
 				String extension = MimeTypeMap
 						.getFileExtensionFromUrl(photoFileUri);
 				MimeTypeMap mime = MimeTypeMap.getSingleton();
 				mimeType = mime.getMimeTypeFromExtension(extension);
 				TransferProgressTypedFile file = new TransferProgressTypedFile(
-						mimeType, photo.file);
+						mimeType, new File(photo.filePath));
 				data.addPart("photo_" + index + "_file", file);
 				index++;
 			}
@@ -1018,20 +1033,20 @@ public class MainActivity extends ActionBarActivity implements
 	private void setupImageView(boolean choosePreviousPhoto) {
 		if (poiPhotos != null && !poiPhotos.isEmpty()) {
 			int newIndex;
-			if (choosePreviousPhoto && imageViewPhoto != null
-					&& poiPhotos.indexOf(imageViewPhoto) > 0) {
-				newIndex = poiPhotos.indexOf(imageViewPhoto) - 1;
+			if (choosePreviousPhoto && imageViewIndex > 0) {
+				newIndex = imageViewIndex - 1;
 			} else {
 				newIndex = poiPhotos.size() - 1;
 			}
-			imageViewPhoto = poiPhotos.get(newIndex);
+			Photo imageViewPhoto = poiPhotos.get(newIndex);
 			cameraTextView.setVisibility(View.GONE);
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(imageViewPhoto.file);
+			Uri photoUri = Uri.fromFile(new File(imageViewPhoto.filePath));
 			imageView.setImageURI(photoUri);
 			rootView.setBackgroundColor(Color.BLACK);
+			imageViewIndex = newIndex;
 		} else {
 			rootView.setBackgroundColor(Color.WHITE);
 		}
@@ -1080,11 +1095,11 @@ public class MainActivity extends ActionBarActivity implements
 			createPhotoFile();
 
 			// Continue only if the file was successfully created
-			if (photoFile != null) {
+			if (photoFilePath != null) {
 
 				// Set the image file name
 				takePhotoIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-						Uri.fromFile(photoFile));
+						Uri.fromFile(new File(photoFilePath)));
 
 				startActivityForResult(takePhotoIntent, INTENT_TAKE_PHOTO);
 			}
