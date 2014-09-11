@@ -540,8 +540,6 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-
-		dumpToDB();
 	}
 
 	@Override
@@ -731,6 +729,9 @@ public class MainActivity extends ActionBarActivity implements
 			dialog.dismiss();
 		}
 		EventBus.getDefault().unregister(this);
+
+		dumpToDB();
+		
 		super.onPause();
 	}
 
@@ -756,7 +757,7 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onStart() {
 
 		super.onStart();
-
+		
 		checkSmartphoneSettings();
 
 		// Ask for user's mail address and/or token if not available
@@ -825,6 +826,15 @@ public class MainActivity extends ActionBarActivity implements
 	private void restoreFromDB() {
 		restorePoiFromDB();
 		restorePrimitiveFromDB();
+		
+		locationEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		locationEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		photoEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		photoEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		poiEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		poiEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		primitiveAttributesEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+		daoSession.clear();
 	}
 
 	private void restorePoiFromDB() {
