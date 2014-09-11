@@ -8,10 +8,11 @@ import android.util.Log;
 import de.greenrobot.dao.AbstractDaoMaster;
 import de.greenrobot.dao.identityscope.IdentityScopeType;
 
+import org.grid2osm.gisapp.PoiEntitiesDao;
 import org.grid2osm.gisapp.PoiEntityDao;
-import org.grid2osm.gisapp.LocationTraceEntityDao;
+import org.grid2osm.gisapp.LocationEntitiesDao;
 import org.grid2osm.gisapp.LocationEntityDao;
-import org.grid2osm.gisapp.PhotosEntityDao;
+import org.grid2osm.gisapp.PhotoEntitiesDao;
 import org.grid2osm.gisapp.PhotoEntityDao;
 import org.grid2osm.gisapp.PrimitiveAttributesEntityDao;
 
@@ -24,20 +25,22 @@ public class DaoMaster extends AbstractDaoMaster {
 
     /** Creates underlying database table using DAOs. */
     public static void createAllTables(SQLiteDatabase db, boolean ifNotExists) {
+        PoiEntitiesDao.createTable(db, ifNotExists);
         PoiEntityDao.createTable(db, ifNotExists);
-        LocationTraceEntityDao.createTable(db, ifNotExists);
+        LocationEntitiesDao.createTable(db, ifNotExists);
         LocationEntityDao.createTable(db, ifNotExists);
-        PhotosEntityDao.createTable(db, ifNotExists);
+        PhotoEntitiesDao.createTable(db, ifNotExists);
         PhotoEntityDao.createTable(db, ifNotExists);
         PrimitiveAttributesEntityDao.createTable(db, ifNotExists);
     }
     
     /** Drops underlying database table using DAOs. */
     public static void dropAllTables(SQLiteDatabase db, boolean ifExists) {
+        PoiEntitiesDao.dropTable(db, ifExists);
         PoiEntityDao.dropTable(db, ifExists);
-        LocationTraceEntityDao.dropTable(db, ifExists);
+        LocationEntitiesDao.dropTable(db, ifExists);
         LocationEntityDao.dropTable(db, ifExists);
-        PhotosEntityDao.dropTable(db, ifExists);
+        PhotoEntitiesDao.dropTable(db, ifExists);
         PhotoEntityDao.dropTable(db, ifExists);
         PrimitiveAttributesEntityDao.dropTable(db, ifExists);
     }
@@ -71,10 +74,11 @@ public class DaoMaster extends AbstractDaoMaster {
 
     public DaoMaster(SQLiteDatabase db) {
         super(db, SCHEMA_VERSION);
+        registerDaoClass(PoiEntitiesDao.class);
         registerDaoClass(PoiEntityDao.class);
-        registerDaoClass(LocationTraceEntityDao.class);
+        registerDaoClass(LocationEntitiesDao.class);
         registerDaoClass(LocationEntityDao.class);
-        registerDaoClass(PhotosEntityDao.class);
+        registerDaoClass(PhotoEntitiesDao.class);
         registerDaoClass(PhotoEntityDao.class);
         registerDaoClass(PrimitiveAttributesEntityDao.class);
     }

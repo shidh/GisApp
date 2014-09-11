@@ -14,7 +14,7 @@ public class LocationEntity {
     private Double longitude;
     private String provider;
     private Long time;
-    private long locationTraceEntityId;
+    private long locationEntitiesId;
 
     public LocationEntity() {
     }
@@ -23,7 +23,7 @@ public class LocationEntity {
         this.id = id;
     }
 
-    public LocationEntity(Long id, Float accuracy, Double altitude, Float bearing, Double latitude, Double longitude, String provider, Long time, long locationTraceEntityId) {
+    public LocationEntity(Long id, Float accuracy, Double altitude, Float bearing, Double latitude, Double longitude, String provider, Long time, long locationEntitiesId) {
         this.id = id;
         this.accuracy = accuracy;
         this.altitude = altitude;
@@ -32,7 +32,7 @@ public class LocationEntity {
         this.longitude = longitude;
         this.provider = provider;
         this.time = time;
-        this.locationTraceEntityId = locationTraceEntityId;
+        this.locationEntitiesId = locationEntitiesId;
     }
 
     public Long getId() {
@@ -99,12 +99,12 @@ public class LocationEntity {
         this.time = time;
     }
 
-    public long getLocationTraceEntityId() {
-        return locationTraceEntityId;
+    public long getLocationEntitiesId() {
+        return locationEntitiesId;
     }
 
-    public void setLocationTraceEntityId(long locationTraceEntityId) {
-        this.locationTraceEntityId = locationTraceEntityId;
+    public void setLocationEntitiesId(long locationEntitiesId) {
+        this.locationEntitiesId = locationEntitiesId;
     }
 
 }

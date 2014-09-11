@@ -35,10 +35,10 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
         public final static Property Provider = new Property(6, String.class, "provider", false, "PROVIDER");
         public final static Property Time = new Property(7, Long.class, "time", false, "TIME");
         public final static Property FilePath = new Property(8, String.class, "filePath", false, "FILE_PATH");
-        public final static Property PhotosEntityId = new Property(9, long.class, "photosEntityId", false, "PHOTOS_ENTITY_ID");
+        public final static Property PhotoEntitiesId = new Property(9, long.class, "photoEntitiesId", false, "PHOTO_ENTITIES_ID");
     };
 
-    private Query<PhotoEntity> photosEntity_PhotoEntityListQuery;
+    private Query<PhotoEntity> photoEntities_PhotoEntityListQuery;
 
     public PhotoEntityDao(DaoConfig config) {
         super(config);
@@ -61,7 +61,7 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
                 "'PROVIDER' TEXT," + // 6: provider
                 "'TIME' INTEGER," + // 7: time
                 "'FILE_PATH' TEXT," + // 8: filePath
-                "'PHOTOS_ENTITY_ID' INTEGER NOT NULL );"); // 9: photosEntityId
+                "'PHOTO_ENTITIES_ID' INTEGER NOT NULL );"); // 9: photoEntitiesId
     }
 
     /** Drops the underlying database table. */
@@ -119,7 +119,7 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
         if (filePath != null) {
             stmt.bindString(9, filePath);
         }
-        stmt.bindLong(10, entity.getPhotosEntityId());
+        stmt.bindLong(10, entity.getPhotoEntitiesId());
     }
 
     /** @inheritdoc */
@@ -141,7 +141,7 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
             cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6), // provider
             cursor.isNull(offset + 7) ? null : cursor.getLong(offset + 7), // time
             cursor.isNull(offset + 8) ? null : cursor.getString(offset + 8), // filePath
-            cursor.getLong(offset + 9) // photosEntityId
+            cursor.getLong(offset + 9) // photoEntitiesId
         );
         return entity;
     }
@@ -158,7 +158,7 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
         entity.setProvider(cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6));
         entity.setTime(cursor.isNull(offset + 7) ? null : cursor.getLong(offset + 7));
         entity.setFilePath(cursor.isNull(offset + 8) ? null : cursor.getString(offset + 8));
-        entity.setPhotosEntityId(cursor.getLong(offset + 9));
+        entity.setPhotoEntitiesId(cursor.getLong(offset + 9));
      }
     
     /** @inheritdoc */
@@ -184,17 +184,17 @@ public class PhotoEntityDao extends AbstractDao<PhotoEntity, Long> {
         return true;
     }
     
-    /** Internal query to resolve the "photoEntityList" to-many relationship of PhotosEntity. */
-    public List<PhotoEntity> _queryPhotosEntity_PhotoEntityList(long photosEntityId) {
+    /** Internal query to resolve the "photoEntityList" to-many relationship of PhotoEntities. */
+    public List<PhotoEntity> _queryPhotoEntities_PhotoEntityList(long photoEntitiesId) {
         synchronized (this) {
-            if (photosEntity_PhotoEntityListQuery == null) {
+            if (photoEntities_PhotoEntityListQuery == null) {
                 QueryBuilder<PhotoEntity> queryBuilder = queryBuilder();
-                queryBuilder.where(Properties.PhotosEntityId.eq(null));
-                photosEntity_PhotoEntityListQuery = queryBuilder.build();
+                queryBuilder.where(Properties.PhotoEntitiesId.eq(null));
+                photoEntities_PhotoEntityListQuery = queryBuilder.build();
             }
         }
-        Query<PhotoEntity> query = photosEntity_PhotoEntityListQuery.forCurrentThread();
-        query.setParameter(0, photosEntityId);
+        Query<PhotoEntity> query = photoEntities_PhotoEntityListQuery.forCurrentThread();
+        query.setParameter(0, photoEntitiesId);
         return query.list();
     }
 

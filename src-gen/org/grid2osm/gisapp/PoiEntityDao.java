@@ -10,6 +10,8 @@ import de.greenrobot.dao.AbstractDao;
 import de.greenrobot.dao.Property;
 import de.greenrobot.dao.internal.SqlUtils;
 import de.greenrobot.dao.internal.DaoConfig;
+import de.greenrobot.dao.query.Query;
+import de.greenrobot.dao.query.QueryBuilder;
 
 import org.grid2osm.gisapp.PoiEntity;
 
@@ -28,12 +30,15 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
     public static class Properties {
         public final static Property Id = new Property(0, Long.class, "id", true, "_id");
         public final static Property Done = new Property(1, Boolean.class, "done", false, "DONE");
-        public final static Property LocationTraceEntityId = new Property(2, long.class, "locationTraceEntityId", false, "LOCATION_TRACE_ENTITY_ID");
-        public final static Property PhotosEntityId = new Property(3, long.class, "photosEntityId", false, "PHOTOS_ENTITY_ID");
+        public final static Property PoiEntitiesId = new Property(2, long.class, "poiEntitiesId", false, "POI_ENTITIES_ID");
+        public final static Property LocationEntitiesId = new Property(3, long.class, "locationEntitiesId", false, "LOCATION_ENTITIES_ID");
+        public final static Property PhotoEntitiesId = new Property(4, long.class, "photoEntitiesId", false, "PHOTO_ENTITIES_ID");
+        public final static Property PrimitiveAttributesEntityId = new Property(5, long.class, "primitiveAttributesEntityId", false, "PRIMITIVE_ATTRIBUTES_ENTITY_ID");
     };
 
     private DaoSession daoSession;
 
+    private Query<PoiEntity> poiEntities_PoiEntityListQuery;
 
     public PoiEntityDao(DaoConfig config) {
         super(config);
@@ -50,8 +55,10 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
         db.execSQL("CREATE TABLE " + constraint + "'POI_ENTITY' (" + //
                 "'_id' INTEGER PRIMARY KEY AUTOINCREMENT ," + // 0: id
                 "'DONE' INTEGER," + // 1: done
-                "'LOCATION_TRACE_ENTITY_ID' INTEGER NOT NULL ," + // 2: locationTraceEntityId
-                "'PHOTOS_ENTITY_ID' INTEGER NOT NULL );"); // 3: photosEntityId
+                "'POI_ENTITIES_ID' INTEGER NOT NULL ," + // 2: poiEntitiesId
+                "'LOCATION_ENTITIES_ID' INTEGER NOT NULL ," + // 3: locationEntitiesId
+                "'PHOTO_ENTITIES_ID' INTEGER NOT NULL ," + // 4: photoEntitiesId
+                "'PRIMITIVE_ATTRIBUTES_ENTITY_ID' INTEGER NOT NULL );"); // 5: primitiveAttributesEntityId
     }
 
     /** Drops the underlying database table. */
@@ -74,8 +81,10 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
         if (done != null) {
             stmt.bindLong(2, done ? 1l: 0l);
         }
-        stmt.bindLong(3, entity.getLocationTraceEntityId());
-        stmt.bindLong(4, entity.getPhotosEntityId());
+        stmt.bindLong(3, entity.getPoiEntitiesId());
+        stmt.bindLong(4, entity.getLocationEntitiesId());
+        stmt.bindLong(5, entity.getPhotoEntitiesId());
+        stmt.bindLong(6, entity.getPrimitiveAttributesEntityId());
     }
 
     @Override
@@ -96,8 +105,10 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
         PoiEntity entity = new PoiEntity( //
             cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
             cursor.isNull(offset + 1) ? null : cursor.getShort(offset + 1) != 0, // done
-            cursor.getLong(offset + 2), // locationTraceEntityId
-            cursor.getLong(offset + 3) // photosEntityId
+            cursor.getLong(offset + 2), // poiEntitiesId
+            cursor.getLong(offset + 3), // locationEntitiesId
+            cursor.getLong(offset + 4), // photoEntitiesId
+            cursor.getLong(offset + 5) // primitiveAttributesEntityId
         );
         return entity;
     }
@@ -107,8 +118,10 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
     public void readEntity(Cursor cursor, PoiEntity entity, int offset) {
         entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
         entity.setDone(cursor.isNull(offset + 1) ? null : cursor.getShort(offset + 1) != 0);
-        entity.setLocationTraceEntityId(cursor.getLong(offset + 2));
-        entity.setPhotosEntityId(cursor.getLong(offset + 3));
+        entity.setPoiEntitiesId(cursor.getLong(offset + 2));
+        entity.setLocationEntitiesId(cursor.getLong(offset + 3));
+        entity.setPhotoEntitiesId(cursor.getLong(offset + 4));
+        entity.setPrimitiveAttributesEntityId(cursor.getLong(offset + 5));
      }
     
     /** @inheritdoc */
@@ -134,6 +147,20 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
         return true;
     }
     
+    /** Internal query to resolve the "poiEntityList" to-many relationship of PoiEntities. */
+    public List<PoiEntity> _queryPoiEntities_PoiEntityList(long poiEntitiesId) {
+        synchronized (this) {
+            if (poiEntities_PoiEntityListQuery == null) {
+                QueryBuilder<PoiEntity> queryBuilder = queryBuilder();
+                queryBuilder.where(Properties.PoiEntitiesId.eq(null));
+                poiEntities_PoiEntityListQuery = queryBuilder.build();
+            }
+        }
+        Query<PoiEntity> query = poiEntities_PoiEntityListQuery.forCurrentThread();
+        query.setParameter(0, poiEntitiesId);
+        return query.list();
+    }
+
     private String selectDeep;
 
     protected String getSelectDeep() {
@@ -141,12 +168,15 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
             StringBuilder builder = new StringBuilder("SELECT ");
             SqlUtils.appendColumns(builder, "T", getAllColumns());
             builder.append(',');
-            SqlUtils.appendColumns(builder, "T0", daoSession.getLocationTraceEntityDao().getAllColumns());
+            SqlUtils.appendColumns(builder, "T0", daoSession.getLocationEntitiesDao().getAllColumns());
             builder.append(',');
-            SqlUtils.appendColumns(builder, "T1", daoSession.getPhotosEntityDao().getAllColumns());
+            SqlUtils.appendColumns(builder, "T1", daoSession.getPhotoEntitiesDao().getAllColumns());
+            builder.append(',');
+            SqlUtils.appendColumns(builder, "T2", daoSession.getPrimitiveAttributesEntityDao().getAllColumns());
             builder.append(" FROM POI_ENTITY T");
-            builder.append(" LEFT JOIN LOCATION_TRACE_ENTITY T0 ON T.'LOCATION_TRACE_ENTITY_ID'=T0.'_id'");
-            builder.append(" LEFT JOIN PHOTOS_ENTITY T1 ON T.'PHOTOS_ENTITY_ID'=T1.'_id'");
+            builder.append(" LEFT JOIN LOCATION_ENTITIES T0 ON T.'LOCATION_ENTITIES_ID'=T0.'_id'");
+            builder.append(" LEFT JOIN PHOTO_ENTITIES T1 ON T.'PHOTO_ENTITIES_ID'=T1.'_id'");
+            builder.append(" LEFT JOIN PRIMITIVE_ATTRIBUTES_ENTITY T2 ON T.'PRIMITIVE_ATTRIBUTES_ENTITY_ID'=T2.'_id'");
             builder.append(' ');
             selectDeep = builder.toString();
         }
@@ -157,15 +187,21 @@ public class PoiEntityDao extends AbstractDao<PoiEntity, Long> {
         PoiEntity entity = loadCurrent(cursor, 0, lock);
         int offset = getAllColumns().length;
 
-        LocationTraceEntity locationTraceEntity = loadCurrentOther(daoSession.getLocationTraceEntityDao(), cursor, offset);
-         if(locationTraceEntity != null) {
-            entity.setLocationTraceEntity(locationTraceEntity);
+        LocationEntities locationEntities = loadCurrentOther(daoSession.getLocationEntitiesDao(), cursor, offset);
+         if(locationEntities != null) {
+            entity.setLocationEntities(locationEntities);
         }
-        offset += daoSession.getLocationTraceEntityDao().getAllColumns().length;
+        offset += daoSession.getLocationEntitiesDao().getAllColumns().length;
 
-        PhotosEntity photosEntity = loadCurrentOther(daoSession.getPhotosEntityDao(), cursor, offset);
-         if(photosEntity != null) {
-            entity.setPhotosEntity(photosEntity);
+        PhotoEntities photoEntities = loadCurrentOther(daoSession.getPhotoEntitiesDao(), cursor, offset);
+         if(photoEntities != null) {
+            entity.setPhotoEntities(photoEntities);
+        }
+        offset += daoSession.getPhotoEntitiesDao().getAllColumns().length;
+
+        PrimitiveAttributesEntity primitiveAttributesEntity = loadCurrentOther(daoSession.getPrimitiveAttributesEntityDao(), cursor, offset);
+         if(primitiveAttributesEntity != null) {
+            entity.setPrimitiveAttributesEntity(primitiveAttributesEntity);
         }
 
         return entity;    

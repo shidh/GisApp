@@ -15,7 +15,7 @@ public class PhotoEntity {
     private String provider;
     private Long time;
     private String filePath;
-    private long photosEntityId;
+    private long photoEntitiesId;
 
     public PhotoEntity() {
     }
@@ -24,7 +24,7 @@ public class PhotoEntity {
         this.id = id;
     }
 
-    public PhotoEntity(Long id, Float accuracy, Double altitude, Float bearing, Double latitude, Double longitude, String provider, Long time, String filePath, long photosEntityId) {
+    public PhotoEntity(Long id, Float accuracy, Double altitude, Float bearing, Double latitude, Double longitude, String provider, Long time, String filePath, long photoEntitiesId) {
         this.id = id;
         this.accuracy = accuracy;
         this.altitude = altitude;
@@ -34,7 +34,7 @@ public class PhotoEntity {
         this.provider = provider;
         this.time = time;
         this.filePath = filePath;
-        this.photosEntityId = photosEntityId;
+        this.photoEntitiesId = photoEntitiesId;
     }
 
     public Long getId() {
@@ -109,12 +109,12 @@ public class PhotoEntity {
         this.filePath = filePath;
     }
 
-    public long getPhotosEntityId() {
-        return photosEntityId;
+    public long getPhotoEntitiesId() {
+        return photoEntitiesId;
     }
 
-    public void setPhotosEntityId(long photosEntityId) {
-        this.photosEntityId = photosEntityId;
+    public void setPhotoEntitiesId(long photoEntitiesId) {
+        this.photoEntitiesId = photoEntitiesId;
     }
 
 }

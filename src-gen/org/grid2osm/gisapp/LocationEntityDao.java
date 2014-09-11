@@ -34,10 +34,10 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
         public final static Property Longitude = new Property(5, Double.class, "longitude", false, "LONGITUDE");
         public final static Property Provider = new Property(6, String.class, "provider", false, "PROVIDER");
         public final static Property Time = new Property(7, Long.class, "time", false, "TIME");
-        public final static Property LocationTraceEntityId = new Property(8, long.class, "locationTraceEntityId", false, "LOCATION_TRACE_ENTITY_ID");
+        public final static Property LocationEntitiesId = new Property(8, long.class, "locationEntitiesId", false, "LOCATION_ENTITIES_ID");
     };
 
-    private Query<LocationEntity> locationTraceEntity_LocationEntityListQuery;
+    private Query<LocationEntity> locationEntities_LocationEntityListQuery;
 
     public LocationEntityDao(DaoConfig config) {
         super(config);
@@ -59,7 +59,7 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
                 "'LONGITUDE' REAL," + // 5: longitude
                 "'PROVIDER' TEXT," + // 6: provider
                 "'TIME' INTEGER," + // 7: time
-                "'LOCATION_TRACE_ENTITY_ID' INTEGER NOT NULL );"); // 8: locationTraceEntityId
+                "'LOCATION_ENTITIES_ID' INTEGER NOT NULL );"); // 8: locationEntitiesId
     }
 
     /** Drops the underlying database table. */
@@ -112,7 +112,7 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
         if (time != null) {
             stmt.bindLong(8, time);
         }
-        stmt.bindLong(9, entity.getLocationTraceEntityId());
+        stmt.bindLong(9, entity.getLocationEntitiesId());
     }
 
     /** @inheritdoc */
@@ -133,7 +133,7 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
             cursor.isNull(offset + 5) ? null : cursor.getDouble(offset + 5), // longitude
             cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6), // provider
             cursor.isNull(offset + 7) ? null : cursor.getLong(offset + 7), // time
-            cursor.getLong(offset + 8) // locationTraceEntityId
+            cursor.getLong(offset + 8) // locationEntitiesId
         );
         return entity;
     }
@@ -149,7 +149,7 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
         entity.setLongitude(cursor.isNull(offset + 5) ? null : cursor.getDouble(offset + 5));
         entity.setProvider(cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6));
         entity.setTime(cursor.isNull(offset + 7) ? null : cursor.getLong(offset + 7));
-        entity.setLocationTraceEntityId(cursor.getLong(offset + 8));
+        entity.setLocationEntitiesId(cursor.getLong(offset + 8));
      }
     
     /** @inheritdoc */
@@ -175,17 +175,17 @@ public class LocationEntityDao extends AbstractDao<LocationEntity, Long> {
         return true;
     }
     
-    /** Internal query to resolve the "locationEntityList" to-many relationship of LocationTraceEntity. */
-    public List<LocationEntity> _queryLocationTraceEntity_LocationEntityList(long locationTraceEntityId) {
+    /** Internal query to resolve the "locationEntityList" to-many relationship of LocationEntities. */
+    public List<LocationEntity> _queryLocationEntities_LocationEntityList(long locationEntitiesId) {
         synchronized (this) {
-            if (locationTraceEntity_LocationEntityListQuery == null) {
+            if (locationEntities_LocationEntityListQuery == null) {
                 QueryBuilder<LocationEntity> queryBuilder = queryBuilder();
-                queryBuilder.where(Properties.LocationTraceEntityId.eq(null));
-                locationTraceEntity_LocationEntityListQuery = queryBuilder.build();
+                queryBuilder.where(Properties.LocationEntitiesId.eq(null));
+                locationEntities_LocationEntityListQuery = queryBuilder.build();
             }
         }
-        Query<LocationEntity> query = locationTraceEntity_LocationEntityListQuery.forCurrentThread();
-        query.setParameter(0, locationTraceEntityId);
+        Query<LocationEntity> query = locationEntities_LocationEntityListQuery.forCurrentThread();
+        query.setParameter(0, locationEntitiesId);
         return query.list();
     }
 

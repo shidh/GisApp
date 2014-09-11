@@ -9,17 +9,19 @@ import de.greenrobot.dao.AbstractDaoSession;
 import de.greenrobot.dao.identityscope.IdentityScopeType;
 import de.greenrobot.dao.internal.DaoConfig;
 
+import org.grid2osm.gisapp.PoiEntities;
 import org.grid2osm.gisapp.PoiEntity;
-import org.grid2osm.gisapp.LocationTraceEntity;
+import org.grid2osm.gisapp.LocationEntities;
 import org.grid2osm.gisapp.LocationEntity;
-import org.grid2osm.gisapp.PhotosEntity;
+import org.grid2osm.gisapp.PhotoEntities;
 import org.grid2osm.gisapp.PhotoEntity;
 import org.grid2osm.gisapp.PrimitiveAttributesEntity;
 
+import org.grid2osm.gisapp.PoiEntitiesDao;
 import org.grid2osm.gisapp.PoiEntityDao;
-import org.grid2osm.gisapp.LocationTraceEntityDao;
+import org.grid2osm.gisapp.LocationEntitiesDao;
 import org.grid2osm.gisapp.LocationEntityDao;
-import org.grid2osm.gisapp.PhotosEntityDao;
+import org.grid2osm.gisapp.PhotoEntitiesDao;
 import org.grid2osm.gisapp.PhotoEntityDao;
 import org.grid2osm.gisapp.PrimitiveAttributesEntityDao;
 
@@ -32,17 +34,19 @@ import org.grid2osm.gisapp.PrimitiveAttributesEntityDao;
  */
 public class DaoSession extends AbstractDaoSession {
 
+    private final DaoConfig poiEntitiesDaoConfig;
     private final DaoConfig poiEntityDaoConfig;
-    private final DaoConfig locationTraceEntityDaoConfig;
+    private final DaoConfig locationEntitiesDaoConfig;
     private final DaoConfig locationEntityDaoConfig;
-    private final DaoConfig photosEntityDaoConfig;
+    private final DaoConfig photoEntitiesDaoConfig;
     private final DaoConfig photoEntityDaoConfig;
     private final DaoConfig primitiveAttributesEntityDaoConfig;
 
+    private final PoiEntitiesDao poiEntitiesDao;
     private final PoiEntityDao poiEntityDao;
-    private final LocationTraceEntityDao locationTraceEntityDao;
+    private final LocationEntitiesDao locationEntitiesDao;
     private final LocationEntityDao locationEntityDao;
-    private final PhotosEntityDao photosEntityDao;
+    private final PhotoEntitiesDao photoEntitiesDao;
     private final PhotoEntityDao photoEntityDao;
     private final PrimitiveAttributesEntityDao primitiveAttributesEntityDao;
 
@@ -50,17 +54,20 @@ public class DaoSession extends AbstractDaoSession {
             daoConfigMap) {
         super(db);
 
+        poiEntitiesDaoConfig = daoConfigMap.get(PoiEntitiesDao.class).clone();
+        poiEntitiesDaoConfig.initIdentityScope(type);
+
         poiEntityDaoConfig = daoConfigMap.get(PoiEntityDao.class).clone();
         poiEntityDaoConfig.initIdentityScope(type);
 
-        locationTraceEntityDaoConfig = daoConfigMap.get(LocationTraceEntityDao.class).clone();
-        locationTraceEntityDaoConfig.initIdentityScope(type);
+        locationEntitiesDaoConfig = daoConfigMap.get(LocationEntitiesDao.class).clone();
+        locationEntitiesDaoConfig.initIdentityScope(type);
 
         locationEntityDaoConfig = daoConfigMap.get(LocationEntityDao.class).clone();
         locationEntityDaoConfig.initIdentityScope(type);
 
-        photosEntityDaoConfig = daoConfigMap.get(PhotosEntityDao.class).clone();
-        photosEntityDaoConfig.initIdentityScope(type);
+        photoEntitiesDaoConfig = daoConfigMap.get(PhotoEntitiesDao.class).clone();
+        photoEntitiesDaoConfig.initIdentityScope(type);
 
         photoEntityDaoConfig = daoConfigMap.get(PhotoEntityDao.class).clone();
         photoEntityDaoConfig.initIdentityScope(type);
@@ -68,44 +75,51 @@ public class DaoSession extends AbstractDaoSession {
         primitiveAttributesEntityDaoConfig = daoConfigMap.get(PrimitiveAttributesEntityDao.class).clone();
         primitiveAttributesEntityDaoConfig.initIdentityScope(type);
 
+        poiEntitiesDao = new PoiEntitiesDao(poiEntitiesDaoConfig, this);
         poiEntityDao = new PoiEntityDao(poiEntityDaoConfig, this);
-        locationTraceEntityDao = new LocationTraceEntityDao(locationTraceEntityDaoConfig, this);
+        locationEntitiesDao = new LocationEntitiesDao(locationEntitiesDaoConfig, this);
         locationEntityDao = new LocationEntityDao(locationEntityDaoConfig, this);
-        photosEntityDao = new PhotosEntityDao(photosEntityDaoConfig, this);
+        photoEntitiesDao = new PhotoEntitiesDao(photoEntitiesDaoConfig, this);
         photoEntityDao = new PhotoEntityDao(photoEntityDaoConfig, this);
         primitiveAttributesEntityDao = new PrimitiveAttributesEntityDao(primitiveAttributesEntityDaoConfig, this);
 
+        registerDao(PoiEntities.class, poiEntitiesDao);
         registerDao(PoiEntity.class, poiEntityDao);
-        registerDao(LocationTraceEntity.class, locationTraceEntityDao);
+        registerDao(LocationEntities.class, locationEntitiesDao);
         registerDao(LocationEntity.class, locationEntityDao);
-        registerDao(PhotosEntity.class, photosEntityDao);
+        registerDao(PhotoEntities.class, photoEntitiesDao);
         registerDao(PhotoEntity.class, photoEntityDao);
         registerDao(PrimitiveAttributesEntity.class, primitiveAttributesEntityDao);
     }
     
     public void clear() {
+        poiEntitiesDaoConfig.getIdentityScope().clear();
         poiEntityDaoConfig.getIdentityScope().clear();
-        locationTraceEntityDaoConfig.getIdentityScope().clear();
+        locationEntitiesDaoConfig.getIdentityScope().clear();
         locationEntityDaoConfig.getIdentityScope().clear();
-        photosEntityDaoConfig.getIdentityScope().clear();
+        photoEntitiesDaoConfig.getIdentityScope().clear();
         photoEntityDaoConfig.getIdentityScope().clear();
         primitiveAttributesEntityDaoConfig.getIdentityScope().clear();
+    }
+
+    public PoiEntitiesDao getPoiEntitiesDao() {
+        return poiEntitiesDao;
     }
 
     public PoiEntityDao getPoiEntityDao() {
         return poiEntityDao;
     }
 
-    public LocationTraceEntityDao getLocationTraceEntityDao() {
-        return locationTraceEntityDao;
+    public LocationEntitiesDao getLocationEntitiesDao() {
+        return locationEntitiesDao;
     }
 
     public LocationEntityDao getLocationEntityDao() {
         return locationEntityDao;
     }
 
-    public PhotosEntityDao getPhotosEntityDao() {
-        return photosEntityDao;
+    public PhotoEntitiesDao getPhotoEntitiesDao() {
+        return photoEntitiesDao;
     }
 
     public PhotoEntityDao getPhotoEntityDao() {

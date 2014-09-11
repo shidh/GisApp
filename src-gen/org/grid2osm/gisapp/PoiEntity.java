@@ -11,8 +11,10 @@ public class PoiEntity {
 
     private Long id;
     private Boolean done;
-    private long locationTraceEntityId;
-    private long photosEntityId;
+    private long poiEntitiesId;
+    private long locationEntitiesId;
+    private long photoEntitiesId;
+    private long primitiveAttributesEntityId;
 
     /** Used to resolve relations */
     private transient DaoSession daoSession;
@@ -20,11 +22,14 @@ public class PoiEntity {
     /** Used for active entity operations. */
     private transient PoiEntityDao myDao;
 
-    private LocationTraceEntity locationTraceEntity;
-    private Long locationTraceEntity__resolvedKey;
+    private LocationEntities locationEntities;
+    private Long locationEntities__resolvedKey;
 
-    private PhotosEntity photosEntity;
-    private Long photosEntity__resolvedKey;
+    private PhotoEntities photoEntities;
+    private Long photoEntities__resolvedKey;
+
+    private PrimitiveAttributesEntity primitiveAttributesEntity;
+    private Long primitiveAttributesEntity__resolvedKey;
 
 
     public PoiEntity() {
@@ -34,11 +39,13 @@ public class PoiEntity {
         this.id = id;
     }
 
-    public PoiEntity(Long id, Boolean done, long locationTraceEntityId, long photosEntityId) {
+    public PoiEntity(Long id, Boolean done, long poiEntitiesId, long locationEntitiesId, long photoEntitiesId, long primitiveAttributesEntityId) {
         this.id = id;
         this.done = done;
-        this.locationTraceEntityId = locationTraceEntityId;
-        this.photosEntityId = photosEntityId;
+        this.poiEntitiesId = poiEntitiesId;
+        this.locationEntitiesId = locationEntitiesId;
+        this.photoEntitiesId = photoEntitiesId;
+        this.primitiveAttributesEntityId = primitiveAttributesEntityId;
     }
 
     /** called by internal mechanisms, do not call yourself. */
@@ -63,75 +70,119 @@ public class PoiEntity {
         this.done = done;
     }
 
-    public long getLocationTraceEntityId() {
-        return locationTraceEntityId;
+    public long getPoiEntitiesId() {
+        return poiEntitiesId;
     }
 
-    public void setLocationTraceEntityId(long locationTraceEntityId) {
-        this.locationTraceEntityId = locationTraceEntityId;
+    public void setPoiEntitiesId(long poiEntitiesId) {
+        this.poiEntitiesId = poiEntitiesId;
     }
 
-    public long getPhotosEntityId() {
-        return photosEntityId;
+    public long getLocationEntitiesId() {
+        return locationEntitiesId;
     }
 
-    public void setPhotosEntityId(long photosEntityId) {
-        this.photosEntityId = photosEntityId;
+    public void setLocationEntitiesId(long locationEntitiesId) {
+        this.locationEntitiesId = locationEntitiesId;
     }
 
-    /** To-one relationship, resolved on first access. */
-    public LocationTraceEntity getLocationTraceEntity() {
-        long __key = this.locationTraceEntityId;
-        if (locationTraceEntity__resolvedKey == null || !locationTraceEntity__resolvedKey.equals(__key)) {
-            if (daoSession == null) {
-                throw new DaoException("Entity is detached from DAO context");
-            }
-            LocationTraceEntityDao targetDao = daoSession.getLocationTraceEntityDao();
-            LocationTraceEntity locationTraceEntityNew = targetDao.load(__key);
-            synchronized (this) {
-                locationTraceEntity = locationTraceEntityNew;
-            	locationTraceEntity__resolvedKey = __key;
-            }
-        }
-        return locationTraceEntity;
+    public long getPhotoEntitiesId() {
+        return photoEntitiesId;
     }
 
-    public void setLocationTraceEntity(LocationTraceEntity locationTraceEntity) {
-        if (locationTraceEntity == null) {
-            throw new DaoException("To-one property 'locationTraceEntityId' has not-null constraint; cannot set to-one to null");
-        }
-        synchronized (this) {
-            this.locationTraceEntity = locationTraceEntity;
-            locationTraceEntityId = locationTraceEntity.getId();
-            locationTraceEntity__resolvedKey = locationTraceEntityId;
-        }
+    public void setPhotoEntitiesId(long photoEntitiesId) {
+        this.photoEntitiesId = photoEntitiesId;
+    }
+
+    public long getPrimitiveAttributesEntityId() {
+        return primitiveAttributesEntityId;
+    }
+
+    public void setPrimitiveAttributesEntityId(long primitiveAttributesEntityId) {
+        this.primitiveAttributesEntityId = primitiveAttributesEntityId;
     }
 
     /** To-one relationship, resolved on first access. */
-    public PhotosEntity getPhotosEntity() {
-        long __key = this.photosEntityId;
-        if (photosEntity__resolvedKey == null || !photosEntity__resolvedKey.equals(__key)) {
+    public LocationEntities getLocationEntities() {
+        long __key = this.locationEntitiesId;
+        if (locationEntities__resolvedKey == null || !locationEntities__resolvedKey.equals(__key)) {
             if (daoSession == null) {
                 throw new DaoException("Entity is detached from DAO context");
             }
-            PhotosEntityDao targetDao = daoSession.getPhotosEntityDao();
-            PhotosEntity photosEntityNew = targetDao.load(__key);
+            LocationEntitiesDao targetDao = daoSession.getLocationEntitiesDao();
+            LocationEntities locationEntitiesNew = targetDao.load(__key);
             synchronized (this) {
-                photosEntity = photosEntityNew;
-            	photosEntity__resolvedKey = __key;
+                locationEntities = locationEntitiesNew;
+            	locationEntities__resolvedKey = __key;
             }
         }
-        return photosEntity;
+        return locationEntities;
     }
 
-    public void setPhotosEntity(PhotosEntity photosEntity) {
-        if (photosEntity == null) {
-            throw new DaoException("To-one property 'photosEntityId' has not-null constraint; cannot set to-one to null");
+    public void setLocationEntities(LocationEntities locationEntities) {
+        if (locationEntities == null) {
+            throw new DaoException("To-one property 'locationEntitiesId' has not-null constraint; cannot set to-one to null");
         }
         synchronized (this) {
-            this.photosEntity = photosEntity;
-            photosEntityId = photosEntity.getId();
-            photosEntity__resolvedKey = photosEntityId;
+            this.locationEntities = locationEntities;
+            locationEntitiesId = locationEntities.getId();
+            locationEntities__resolvedKey = locationEntitiesId;
+        }
+    }
+
+    /** To-one relationship, resolved on first access. */
+    public PhotoEntities getPhotoEntities() {
+        long __key = this.photoEntitiesId;
+        if (photoEntities__resolvedKey == null || !photoEntities__resolvedKey.equals(__key)) {
+            if (daoSession == null) {
+                throw new DaoException("Entity is detached from DAO context");
+            }
+            PhotoEntitiesDao targetDao = daoSession.getPhotoEntitiesDao();
+            PhotoEntities photoEntitiesNew = targetDao.load(__key);
+            synchronized (this) {
+                photoEntities = photoEntitiesNew;
+            	photoEntities__resolvedKey = __key;
+            }
+        }
+        return photoEntities;
+    }
+
+    public void setPhotoEntities(PhotoEntities photoEntities) {
+        if (photoEntities == null) {
+            throw new DaoException("To-one property 'photoEntitiesId' has not-null constraint; cannot set to-one to null");
+        }
+        synchronized (this) {
+            this.photoEntities = photoEntities;
+            photoEntitiesId = photoEntities.getId();
+            photoEntities__resolvedKey = photoEntitiesId;
+        }
+    }
+
+    /** To-one relationship, resolved on first access. */
+    public PrimitiveAttributesEntity getPrimitiveAttributesEntity() {
+        long __key = this.primitiveAttributesEntityId;
+        if (primitiveAttributesEntity__resolvedKey == null || !primitiveAttributesEntity__resolvedKey.equals(__key)) {
+            if (daoSession == null) {
+                throw new DaoException("Entity is detached from DAO context");
+            }
+            PrimitiveAttributesEntityDao targetDao = daoSession.getPrimitiveAttributesEntityDao();
+            PrimitiveAttributesEntity primitiveAttributesEntityNew = targetDao.load(__key);
+            synchronized (this) {
+                primitiveAttributesEntity = primitiveAttributesEntityNew;
+            	primitiveAttributesEntity__resolvedKey = __key;
+            }
+        }
+        return primitiveAttributesEntity;
+    }
+
+    public void setPrimitiveAttributesEntity(PrimitiveAttributesEntity primitiveAttributesEntity) {
+        if (primitiveAttributesEntity == null) {
+            throw new DaoException("To-one property 'primitiveAttributesEntityId' has not-null constraint; cannot set to-one to null");
+        }
+        synchronized (this) {
+            this.primitiveAttributesEntity = primitiveAttributesEntity;
+            primitiveAttributesEntityId = primitiveAttributesEntity.getId();
+            primitiveAttributesEntity__resolvedKey = primitiveAttributesEntityId;
         }
     }
 

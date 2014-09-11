@@ -42,7 +42,6 @@ import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 
-import de.greenrobot.dao.identityscope.IdentityScopeType;
 import de.greenrobot.event.EventBus;
 
 import android.accounts.AccountManager;
@@ -157,6 +156,18 @@ public class MainActivity extends ActionBarActivity implements
 	// Resume sending after refreshing the Google token
 	private Boolean resumeSend;
 
+	// sqlite attributes
+	private SQLiteDatabase db;
+	private DaoMaster daoMaster;
+	private DaoSession daoSession;
+	private LocationEntitiesDao locationEntitiesDao;
+	private LocationEntityDao locationEntityDao;
+	private PhotoEntitiesDao photoEntitiesDao;
+	private PhotoEntityDao photoEntityDao;
+	private PoiEntitiesDao poiEntitiesDao;
+	private PoiEntityDao poiEntityDao;
+	private PrimitiveAttributesEntityDao primitiveAttributesEntityDao;
+
 	// Add file to photoFiles to be able to send them later on
 	private void addPhotoToListAndGallery() {
 
@@ -193,7 +204,7 @@ public class MainActivity extends ActionBarActivity implements
 			gpsSettings.show(getSupportFragmentManager(), "gpsSettings");
 		}
 	}
-
+	
 	private void clearImageView() {
 		imageView.setImageResource(R.drawable.ic_swipe);
 		cameraTextView.setVisibility(View.VISIBLE);
@@ -205,7 +216,7 @@ public class MainActivity extends ActionBarActivity implements
 		poiPhotos = new ArrayList<Photo>();
 		poiLocationTrace = new ArrayList<CustomLocation>();
 	}
-
+	
 	// Create a file for saving the photo
 	private void createPhotoFile() {
 
@@ -223,7 +234,86 @@ public class MainActivity extends ActionBarActivity implements
 					Toast.LENGTH_LONG).show();
 		}
 	}
+	
+	private void dumpPoiToDB(PoiEntities poiEntities, ArrayList<Poi> allPoi,
+			boolean done) {
 
+		for (Poi poi : allPoi) {
+			LocationEntities locationEntities = new LocationEntities();
+			locationEntitiesDao.insert(locationEntities);
+
+			for (CustomLocation location : poi.locationTrace) {
+				LocationEntity locationEntity = new LocationEntity();
+				locationEntity.setAccuracy(location.accuracy);
+				locationEntity.setAltitude(location.altitude);
+				locationEntity.setBearing(location.bearing);
+				locationEntity.setLatitude(location.latitude);
+				locationEntity.setLocationEntitiesId(locationEntities.getId());
+				locationEntity.setLongitude(location.longitude);
+				locationEntity.setProvider(location.provider);
+				locationEntity.setTime(location.time);
+				locationEntityDao.insert(locationEntity);
+			}
+
+			PhotoEntities photoEntities = new PhotoEntities();
+			photoEntitiesDao.insert(photoEntities);
+
+			for (Photo photo : poi.photos) {
+				PhotoEntity photoEntity = new PhotoEntity();
+				photoEntity.setAccuracy(photo.accuracy);
+				photoEntity.setAltitude(photo.altitude);
+				photoEntity.setBearing(photo.bearing);
+				photoEntity.setFilePath(photo.filePath);
+				photoEntity.setLatitude(photo.latitude);
+				photoEntity.setLongitude(photo.longitude);
+				photoEntity.setPhotoEntitiesId(photoEntities.getId());
+				photoEntity.setProvider(photo.provider);
+				photoEntity.setTime(photo.time);
+				photoEntityDao.insert(photoEntity);
+			}
+
+			PoiEntity poiEntity = new PoiEntity();
+			poiEntity.setDone(done);
+			poiEntity.setPoiEntitiesId(poiEntities.getId());
+			poiEntity.setLocationEntitiesId(locationEntities.getId());
+			poiEntity.setPhotoEntitiesId(photoEntities.getId());
+			poiEntityDao.insert(poiEntity);
+		}
+	}
+	
+	private void dumpPrimitiveToDB() {
+
+		PrimitiveAttributesEntity primitiveAttributesEntity = new PrimitiveAttributesEntity();
+		primitiveAttributesEntity.setAccountPickerIsOpen(accountPickerIsOpen);
+		primitiveAttributesEntity
+				.setAccumulatedTransferSize(accumulatedTransferSize);
+		primitiveAttributesEntity.setGesturesEnabled(gesturesEnabled);
+		primitiveAttributesEntity.setGMail(gMail);
+		primitiveAttributesEntity.setGToken(gToken);
+		primitiveAttributesEntity.setImageViewIndex(imageViewIndex);
+		primitiveAttributesEntity.setLocationTraceEnabled(locationTraceEnabled);
+		primitiveAttributesEntity.setPhotoFilePath(photoFilePath);
+		primitiveAttributesEntity.setProgressBar(progressBar.getVisibility());
+		primitiveAttributesEntity.setProgressCircle(progressCircle
+				.getVisibility());
+		primitiveAttributesEntity.setResumeSend(resumeSend);
+		primitiveAttributesEntity.setTakeAnotherPhoto(takeAnotherPhoto);
+		primitiveAttributesEntity.setTotalTransferSize(totalTransferSize);
+		primitiveAttributesEntityDao.insert(primitiveAttributesEntity);
+	}
+	
+	private void dumpToDB() {
+		PoiEntities poiEntities = new PoiEntities();
+		poiEntitiesDao.insert(poiEntities);
+
+		dumpPoiToDB(poiEntities, pois, true);
+		ArrayList<Poi> newPoi = new ArrayList<Poi>();
+		newPoi.add(new Poi(poiLocationTrace, poiPhotos));
+		dumpPoiToDB(poiEntities, newPoi, false);
+
+		dumpPrimitiveToDB();
+	}
+	
 	/*
 	 * Attempts to retrieve the username. If the account is not yet known,
 	 * invoke the picker. Once the account is known, start an instance of the
@@ -236,13 +326,13 @@ public class MainActivity extends ActionBarActivity implements
 			new GetTokenTask(this, gMail, SCOPE).execute();
 		}
 	}
-
+	
 	// Check whether the GPS sensor is activated
 	private boolean gpsIsEnabled() {
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 	}
-
+	
 	/*
 	 * This method is a hook for background threads and async tasks that need to
 	 * provide the user a response UI when an exception occurs.
@@ -282,7 +372,7 @@ public class MainActivity extends ActionBarActivity implements
 			}
 		});
 	}
-
+	
 	// Checks whether the device currently has a network connection
 	private boolean netIsEnabled() {
 		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -385,35 +475,22 @@ public class MainActivity extends ActionBarActivity implements
 		finish();
 	}
 
-	private SQLiteDatabase db;
-	private DaoMaster daoMaster;
-	private DaoSession daoSession;
-	private LocationEntityDao locationEntityDao;
-	private LocationTraceEntityDao locationTraceEntityDao;
-	private PhotoEntityDao photoEntityDao;
-	private PhotosEntityDao photosEntityDao;
-	private PoiEntityDao poiEntityDao;
-	private PrimitiveAttributesEntityDao primitiveAttributesEntityDao;
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		File dbPath = new File(Environment.getExternalStorageDirectory()
-				.getPath() + File.separator + getString(R.string.app_name));
-		if (!dbPath.exists()) {
-			dbPath.mkdirs();
-		}
-		db = SQLiteDatabase.openOrCreateDatabase(new File(dbPath.getPath(),
-				"opendao.sqlite"), null);
+		DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "gisapp-db",
+				null);
+		db = helper.getWritableDatabase();
 		daoMaster = new DaoMaster(db);
 		daoSession = daoMaster.newSession();
+		locationEntitiesDao = daoSession.getLocationEntitiesDao();
 		locationEntityDao = daoSession.getLocationEntityDao();
-		locationTraceEntityDao = daoSession.getLocationTraceEntityDao();
+		photoEntitiesDao = daoSession.getPhotoEntitiesDao();
 		photoEntityDao = daoSession.getPhotoEntityDao();
-		photosEntityDao = daoSession.getPhotosEntityDao();
+		poiEntitiesDao = daoSession.getPoiEntitiesDao();
 		poiEntityDao = daoSession.getPoiEntityDao();
 		primitiveAttributesEntityDao = daoSession
 				.getPrimitiveAttributesEntityDao();
@@ -443,66 +520,8 @@ public class MainActivity extends ActionBarActivity implements
 
 		// Initialise the dialogs list
 		dialogs = new ArrayList<DialogFragment>();
-		
+
 		restoreFromDB();
-	}
-	
-	
-	
-	private void restoreFromDB() {
-		restorePoiFromDB();
-		restorePrimitiveFromDB();
-		
-		DaoMaster.dropAllTables(db, true);
-		DaoMaster.createAllTables(db, true);
-	}
-
-	private void restorePoiFromDB() {
-
-		// Initialize the pois
-		pois = new ArrayList<Poi>();
-
-		// Initialize the poiPhotos
-		poiPhotos = new ArrayList<Photo>();
-
-		// Initialize the trace
-		poiLocationTrace = new ArrayList<CustomLocation>();
-
-		for (PoiEntity poiEntity : poiEntityDao.loadAll()) {
-
-			ArrayList<CustomLocation> locationTrace = new ArrayList<CustomLocation>();
-			ArrayList<Photo> photos = new ArrayList<Photo>();
-
-			for (LocationEntity locationEntity : poiEntity
-					.getLocationTraceEntity().getLocationEntityList()) {
-				CustomLocation customLocation = new CustomLocation(
-						locationEntity.getAccuracy(),
-						locationEntity.getAltitude(),
-						locationEntity.getBearing(),
-						locationEntity.getLatitude(),
-						locationEntity.getLongitude(),
-						locationEntity.getProvider(), locationEntity.getTime());
-				locationTrace.add(customLocation);
-			}
-
-			for (PhotoEntity photoEntity : poiEntity.getPhotosEntity()
-					.getPhotoEntityList()) {
-				Photo photo = new Photo(photoEntity.getAccuracy(),
-						photoEntity.getAltitude(), photoEntity.getBearing(),
-						photoEntity.getLatitude(), photoEntity.getLongitude(),
-						photoEntity.getProvider(), photoEntity.getTime(),
-						photoEntity.getFilePath());
-				photos.add(photo);
-			}
-
-			if (poiEntity.getDone()) {
-				Poi poi = new Poi(locationTrace, photos);
-				pois.add(poi);
-			} else {
-				poiLocationTrace = locationTrace;
-				poiPhotos = photos;
-			}
-		}
 	}
 
 	@Override
@@ -523,59 +542,6 @@ public class MainActivity extends ActionBarActivity implements
 		super.onDestroy();
 
 		dumpToDB();
-	}
-	
-	private void dumpToDB() {
-		dumpPoiToDB(pois, true);
-		ArrayList<Poi> newPoi = new ArrayList<Poi>();
-		newPoi.add(new Poi(poiLocationTrace, poiPhotos));
-		dumpPoiToDB(newPoi, false);
-
-		dumpPrimitiveToDB();
-	}
-
-	private void dumpPoiToDB(ArrayList<Poi> allPoi, boolean done) {
-		for (Poi poi : allPoi) {
-			LocationTraceEntity locationTraceEntity = new LocationTraceEntity();
-			locationTraceEntityDao.insert(locationTraceEntity);
-
-			for (CustomLocation location : poi.locationTrace) {
-				LocationEntity locationEntity = new LocationEntity();
-				locationEntity.setAccuracy(location.accuracy);
-				locationEntity.setAltitude(location.altitude);
-				locationEntity.setBearing(location.bearing);
-				locationEntity.setLatitude(location.latitude);
-				locationEntity.setLocationTraceEntityId(locationTraceEntity
-						.getId());
-				locationEntity.setLongitude(location.longitude);
-				locationEntity.setProvider(location.provider);
-				locationEntity.setTime(location.time);
-				locationEntityDao.insert(locationEntity);
-			}
-
-			PhotosEntity photosEntity = new PhotosEntity();
-			photosEntityDao.insert(photosEntity);
-
-			for (Photo photo : poi.photos) {
-				PhotoEntity photoEntity = new PhotoEntity();
-				photoEntity.setAccuracy(photo.accuracy);
-				photoEntity.setAltitude(photo.altitude);
-				photoEntity.setBearing(photo.bearing);
-				photoEntity.setFilePath(photo.filePath);
-				photoEntity.setLatitude(photo.latitude);
-				photoEntity.setLongitude(photo.longitude);
-				photoEntity.setPhotosEntityId(photosEntity.getId());
-				photoEntity.setProvider(photo.provider);
-				photoEntity.setTime(photo.time);
-				photoEntityDao.insert(photoEntity);
-			}
-
-			PoiEntity poiEntity = new PoiEntity();
-			poiEntity.setDone(done);
-			poiEntity.setLocationTraceEntityId(locationTraceEntity.getId());
-			poiEntity.setPhotosEntityId(photosEntity.getId());
-			poiEntityDao.insert(poiEntity);
-		}
 	}
 
 	@Override
@@ -856,29 +822,98 @@ public class MainActivity extends ActionBarActivity implements
 		}
 	}
 
+	private void restoreFromDB() {
+		restorePoiFromDB();
+		restorePrimitiveFromDB();
+	}
+
+	private void restorePoiFromDB() {
+
+		// Initialize the pois
+		pois = new ArrayList<Poi>();
+
+		// Initialize the poiPhotos
+		poiPhotos = new ArrayList<Photo>();
+
+		// Initialize the trace
+		poiLocationTrace = new ArrayList<CustomLocation>();
+
+		List<PoiEntities> poiEntitiesList = poiEntitiesDao.queryBuilder()
+				.list();
+
+		if (poiEntitiesList.size() > 0) {
+			PoiEntities poiEntities = poiEntitiesList.get(poiEntitiesList
+					.size() - 1);
+
+			for (PoiEntity poiEntity : poiEntities.getPoiEntityList()) {
+
+				ArrayList<CustomLocation> locationTrace = new ArrayList<CustomLocation>();
+				ArrayList<Photo> photos = new ArrayList<Photo>();
+
+				for (LocationEntity locationEntity : poiEntity
+						.getLocationEntities().getLocationEntityList()) {
+					CustomLocation customLocation = new CustomLocation(
+							locationEntity.getAccuracy(),
+							locationEntity.getAltitude(),
+							locationEntity.getBearing(),
+							locationEntity.getLatitude(),
+							locationEntity.getLongitude(),
+							locationEntity.getProvider(),
+							locationEntity.getTime());
+					locationTrace.add(customLocation);
+				}
+
+				for (PhotoEntity photoEntity : poiEntity.getPhotoEntities()
+						.getPhotoEntityList()) {
+					Photo photo = new Photo(photoEntity.getAccuracy(),
+							photoEntity.getAltitude(),
+							photoEntity.getBearing(),
+							photoEntity.getLatitude(),
+							photoEntity.getLongitude(),
+							photoEntity.getProvider(), photoEntity.getTime(),
+							photoEntity.getFilePath());
+					photos.add(photo);
+				}
+
+				if (poiEntity.getDone()) {
+					Poi poi = new Poi(locationTrace, photos);
+					pois.add(poi);
+				} else {
+					poiLocationTrace = locationTrace;
+					poiPhotos = photos;
+				}
+			}
+		}
+	}
+
 	private void restorePrimitiveFromDB() {
 
 		List<PrimitiveAttributesEntity> primitiveAttributesEntities = primitiveAttributesEntityDao
-				.loadAll();
-		if (primitiveAttributesEntities.size() == 1) {
-			PrimitiveAttributesEntity primitiveAttributes = primitiveAttributesEntities
-					.get(0);
-			accountPickerIsOpen = primitiveAttributes.getAccountPickerIsOpen();
-			accumulatedTransferSize = primitiveAttributes
+				.queryBuilder().list();
+
+		if (primitiveAttributesEntities.size() > 0) {
+			PrimitiveAttributesEntity primitiveAttributesEntity = primitiveAttributesEntities
+					.get(primitiveAttributesEntities.size() - 1);
+
+			accountPickerIsOpen = primitiveAttributesEntity
+					.getAccountPickerIsOpen();
+			accumulatedTransferSize = primitiveAttributesEntity
 					.getAccumulatedTransferSize();
-			gesturesEnabled = primitiveAttributes.getGesturesEnabled();
-			gMail = primitiveAttributes.getGMail();
-			gToken = primitiveAttributes.getGMail();
-			imageViewIndex = primitiveAttributes.getImageViewIndex();
-			locationTraceEnabled = primitiveAttributes
+			gesturesEnabled = primitiveAttributesEntity.getGesturesEnabled();
+			gMail = primitiveAttributesEntity.getGMail();
+			gToken = primitiveAttributesEntity.getGMail();
+			imageViewIndex = primitiveAttributesEntity.getImageViewIndex();
+			locationTraceEnabled = primitiveAttributesEntity
 					.getLocationTraceEnabled();
-			photoFilePath = primitiveAttributes.getPhotoFilePath();
-			progressBar.setVisibility(primitiveAttributes.getProgressBar());
-			progressCircle.setVisibility(primitiveAttributes
+			photoFilePath = primitiveAttributesEntity.getPhotoFilePath();
+			progressBar.setVisibility(primitiveAttributesEntity
+					.getProgressBar());
+			progressCircle.setVisibility(primitiveAttributesEntity
 					.getProgressCircle());
-			resumeSend = primitiveAttributes.getResumeSend();
-			takeAnotherPhoto = primitiveAttributes.getTakeAnotherPhoto();
-			totalTransferSize = primitiveAttributes.getTotalTransferSize();
+			resumeSend = primitiveAttributesEntity.getResumeSend();
+			takeAnotherPhoto = primitiveAttributesEntity.getTakeAnotherPhoto();
+			totalTransferSize = primitiveAttributesEntity
+					.getTotalTransferSize();
 			primitiveAttributesEntityDao.deleteAll();
 		}
 	}
@@ -887,27 +922,6 @@ public class MainActivity extends ActionBarActivity implements
 		pois.add(new Poi(poiLocationTrace, poiPhotos));
 		updatePoiMenuItemButton();
 		clearImageView();
-	}
-
-	private void dumpPrimitiveToDB() {
-
-		PrimitiveAttributesEntity primitiveAttributesEntity = new PrimitiveAttributesEntity();
-		primitiveAttributesEntity.setAccountPickerIsOpen(accountPickerIsOpen);
-		primitiveAttributesEntity
-				.setAccumulatedTransferSize(accumulatedTransferSize);
-		primitiveAttributesEntity.setGesturesEnabled(gesturesEnabled);
-		primitiveAttributesEntity.setGMail(gMail);
-		primitiveAttributesEntity.setGToken(gToken);
-		primitiveAttributesEntity.setImageViewIndex(imageViewIndex);
-		primitiveAttributesEntity.setLocationTraceEnabled(locationTraceEnabled);
-		primitiveAttributesEntity.setPhotoFilePath(photoFilePath);
-		primitiveAttributesEntity.setProgressBar(progressBar.getVisibility());
-		primitiveAttributesEntity.setProgressCircle(progressCircle
-				.getVisibility());
-		primitiveAttributesEntity.setResumeSend(resumeSend);
-		primitiveAttributesEntity.setTakeAnotherPhoto(takeAnotherPhoto);
-		primitiveAttributesEntity.setTotalTransferSize(totalTransferSize);
-		primitiveAttributesEntityDao.insert(primitiveAttributesEntity);
 	}
 
 	// Send the data to the backend server
