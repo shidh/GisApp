@@ -94,7 +94,7 @@ public class MainActivity extends ActionBarActivity implements
 	private Boolean locationTraceEnabled;
 
 	// Attributes used by the REST client
-	private static final String SCOPE = "audience:server:client_id:889611969164-ujvohn299csu833avfmcsun3k6fna30s.apps.googleusercontent.com";
+	private static final String SCOPE = "audience:server:client_id:484348018096-2vlhog84fcgd06nalbe16i446veti18c.apps.googleusercontent.com";
 	private String gToken;
 	private ProgressBar progressBar;
 	private ProgressBar progressCircle;
