@@ -1,5 +1,7 @@
 package org.grid2osm.gisapp.AsyncTask;
 
+import java.util.concurrent.TimeUnit;
+
 import org.grid2osm.gisapp.RestClientInterface;
 import org.grid2osm.gisapp.event.SendDataTaskEvent;
 import org.grid2osm.gisapp.retrofit.TransferProgressMultipartTypedOutput;
@@ -26,6 +28,7 @@ public class SendDataTask extends
 			TransferProgressMultipartTypedOutput... params) {
 
 		OkHttpClient okHttpClient = new OkHttpClient();
+		okHttpClient.setWriteTimeout(3000, TimeUnit.MILLISECONDS);
 		OkClient okClient = new OkClient(okHttpClient);
 		RestAdapter restAdapter = new RestAdapter.Builder().setClient(okClient)
 				.setEndpoint(REST_SERVER).build();

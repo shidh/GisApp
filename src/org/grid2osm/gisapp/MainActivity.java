@@ -603,6 +603,7 @@ public class MainActivity extends ActionBarActivity implements
 	public void onEventMainThread(SendDataTaskEvent event) {
 		if (event.httpStatus == null) {
 			progressBar.setVisibility(View.GONE);
+			progressCircle.setVisibility(View.GONE);
 			gesturesEnabled = true;
 			Toast.makeText(MainActivity.this,
 					R.string.problem_no_server_connection, Toast.LENGTH_SHORT)
@@ -688,6 +689,12 @@ public class MainActivity extends ActionBarActivity implements
 	}
 
 	public void onEventMainThread(TransferProgressChangedEvent event) {
+		if (progressBar.getVisibility() != View.VISIBLE) {
+			if (progressCircle.getVisibility() == View.VISIBLE) {
+				progressCircle.setVisibility(View.GONE);
+			}
+			progressBar.setVisibility(View.VISIBLE);
+		}
 		accumulatedTransferSize += event.additionalTransferSize;
 		progressBar
 				.setProgress((int) (accumulatedTransferSize * 100 / totalTransferSize));
@@ -939,7 +946,7 @@ public class MainActivity extends ActionBarActivity implements
 		gesturesEnabled = false;
 		accumulatedTransferSize = 0L;
 		progressBar.setProgress((int) (long) accumulatedTransferSize);
-		progressBar.setVisibility(View.VISIBLE);
+		progressCircle.setVisibility(View.VISIBLE);
 
 		TransferProgressMultipartTypedOutput data = new TransferProgressMultipartTypedOutput();
 		data.addPart("token", new TransferProgressTypedString(gToken));
