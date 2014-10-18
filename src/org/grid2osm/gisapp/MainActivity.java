@@ -1,6 +1,7 @@
 package org.grid2osm.gisapp;
 
 import java.io.File;
+import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,6 +50,8 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
@@ -62,6 +65,7 @@ import android.provider.Settings;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBarActivity;
+import android.util.DisplayMetrics;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -157,6 +161,7 @@ public class MainActivity extends ActionBarActivity implements
 	private Boolean resumeSend;
 
 	// sqlite attributes
+	private DevOpenHelper helper;
 	private SQLiteDatabase db;
 	private DaoMaster daoMaster;
 	private DaoSession daoSession;
@@ -481,7 +486,7 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		DevOpenHelper helper = new DaoMaster.DevOpenHelper(this, "gisapp-db",
+		helper = new DaoMaster.DevOpenHelper(this, "gisapp-db",
 				null);
 		db = helper.getWritableDatabase();
 		daoMaster = new DaoMaster(db);
@@ -540,6 +545,10 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+
+		if (helper != null) {
+			helper.close();
+		}
 	}
 
 	@Override
@@ -1060,8 +1069,25 @@ public class MainActivity extends ActionBarActivity implements
 			deleteTextView.setVisibility(View.GONE);
 			previewTextView.setVisibility(View.GONE);
 			sendTextView.setVisibility(View.GONE);
-			Uri photoUri = Uri.fromFile(new File(imageViewPhoto.filePath));
-			imageView.setImageURI(photoUri);
+
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeFile(imageViewPhoto.filePath, options);
+			DisplayMetrics metrics = new DisplayMetrics();
+			getWindowManager().getDefaultDisplay().getMetrics(metrics);
+			double heightRatio = options.outHeight/metrics.heightPixels;
+			double widthRatio = options.outWidth/metrics.widthPixels;
+			int inSampleSize;
+
+			if (heightRatio >= widthRatio) {
+				inSampleSize = (int) (Math.log(heightRatio + 1)/Math.log(2));
+			} else {
+				inSampleSize = (int) (Math.log(widthRatio + 1)/Math.log(2));
+			}
+			options.inSampleSize = inSampleSize * 2;
+			options.inPreferredConfig = Bitmap.Config.RGB_565;
+			options.inJustDecodeBounds = false;
+			imageView.setImageBitmap(BitmapFactory.decodeFile(imageViewPhoto.filePath, options));
 			rootView.setBackgroundColor(Color.BLACK);
 			imageViewIndex = newIndex;
 		} else {
