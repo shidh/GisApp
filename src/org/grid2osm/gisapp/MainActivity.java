@@ -563,9 +563,13 @@ public class MainActivity extends ActionBarActivity implements
 	public void onEventMainThread(GetTokenFinishedEvent event) {
 		gToken = event.gToken;
 		if (resumeSend != null && resumeSend) {
-			resumeSend = false;
-			progressCircle.setVisibility(View.GONE);
-			sendData();
+			if (gToken != null) {
+				resumeSend = false;
+				progressCircle.setVisibility(View.GONE);
+				sendData();
+			} else {
+				new SendDataTaskEvent(HttpStatus.SC_UNAUTHORIZED);
+			}
 		}
 	}
 
@@ -619,11 +623,17 @@ public class MainActivity extends ActionBarActivity implements
 					.show();
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
 			progressBar.setVisibility(View.GONE);
-			progressCircle.setVisibility(View.VISIBLE);
 			Toast.makeText(this, R.string.problem_token_expired,
-					Toast.LENGTH_SHORT).show();
-			resumeSend = true;
-			getUsername();
+				Toast.LENGTH_SHORT).show();
+			if (resumeSend) {
+				progressCircle.setVisibility(View.GONE);
+				gesturesEnabled = true;
+				resumeSend = false;
+			} else {
+				progressCircle.setVisibility(View.VISIBLE);
+				resumeSend = true;
+				getUsername();
+			}
 		} else if (event.httpStatus.equals(HttpStatus.SC_OK)) {
 			/*
 			 * The poi data and photos were sent successfully. Therefore, we
@@ -634,6 +644,7 @@ public class MainActivity extends ActionBarActivity implements
 			updatePoiMenuItemButton();
 			if (pois.isEmpty()) {
 				progressBar.setVisibility(View.GONE);
+				progressCircle.setVisibility(View.GONE);
 				gesturesEnabled = true;
 				clearImageView();
 			} else {
@@ -641,6 +652,7 @@ public class MainActivity extends ActionBarActivity implements
 			}
 		} else {
 			progressBar.setVisibility(View.GONE);
+			progressCircle.setVisibility(View.GONE);
 			gesturesEnabled = true;
 			Toast.makeText(this, R.string.problem_send_data, Toast.LENGTH_LONG)
 					.show();
@@ -1077,14 +1089,12 @@ public class MainActivity extends ActionBarActivity implements
 			getWindowManager().getDefaultDisplay().getMetrics(metrics);
 			double heightRatio = options.outHeight/metrics.heightPixels;
 			double widthRatio = options.outWidth/metrics.widthPixels;
-			int inSampleSize;
 
 			if (heightRatio >= widthRatio) {
-				inSampleSize = (int) (Math.log(heightRatio + 1)/Math.log(2));
+				options.inSampleSize = (int) heightRatio;
 			} else {
-				inSampleSize = (int) (Math.log(widthRatio + 1)/Math.log(2));
+				options.inSampleSize = (int) widthRatio;
 			}
-			options.inSampleSize = inSampleSize * 2;
 			options.inPreferredConfig = Bitmap.Config.RGB_565;
 			options.inJustDecodeBounds = false;
 			imageView.setImageBitmap(BitmapFactory.decodeFile(imageViewPhoto.filePath, options));
