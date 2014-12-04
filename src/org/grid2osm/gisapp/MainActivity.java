@@ -1,7 +1,6 @@
 package org.grid2osm.gisapp;
 
 import java.io.File;
-import java.lang.Math;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -146,6 +145,7 @@ public class MainActivity extends ActionBarActivity implements
 	// Keeps the app from opening multiple dialogs at the same time
 	private Boolean accountPickerIsOpen;
 	private ArrayList<DialogFragment> dialogs;
+	private Dialog playServicesDialog;
 
 	/*
 	 * After the intent to take a picture finishes we need to wait for
@@ -230,10 +230,17 @@ public class MainActivity extends ActionBarActivity implements
 					Locale.getDefault()).format(new Date());
 			String photoFileName = getString(R.string.app_name) + "_"
 					+ timeStamp;
-			File storageDir = Environment
-					.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+			File storageDir = new File(
+					Environment
+							.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+					getString(R.string.app_name));
 			photoFilePath = new File(storageDir.getPath(), photoFileName
 					+ ".jpg").getPath();
+
+			// Create the storage directory if it does not exist
+			if (!storageDir.exists() && !storageDir.mkdirs()) {
+				photoFilePath = null;
+			}
 		} catch (Exception e) {
 			Toast.makeText(this, R.string.problem_create_file,
 					Toast.LENGTH_LONG).show();
@@ -474,10 +481,17 @@ public class MainActivity extends ActionBarActivity implements
 	 */
 	@Override
 	public void onConnectionFailed(ConnectionResult connectionResult) {
+		playServicesDialog = GooglePlayServicesUtil.getErrorDialog(
+				GooglePlayServicesUtil.isGooglePlayServicesAvailable(this),
+				this, 0);
 
-		Toast.makeText(this, R.string.problem_no_localization,
-				Toast.LENGTH_SHORT).show();
-		finish();
+		if (playServicesDialog != null) {
+			playServicesDialog.show();
+		} else {
+			Toast.makeText(this, R.string.problem_no_localization,
+					Toast.LENGTH_SHORT).show();
+			finish();
+		}
 	}
 
 	@Override
@@ -486,8 +500,7 @@ public class MainActivity extends ActionBarActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		helper = new DaoMaster.DevOpenHelper(this, "gisapp-db",
-				null);
+		helper = new DaoMaster.DevOpenHelper(this, "gisapp-db", null);
 		db = helper.getWritableDatabase();
 		daoMaster = new DaoMaster(db);
 		daoSession = daoMaster.newSession();
@@ -624,7 +637,7 @@ public class MainActivity extends ActionBarActivity implements
 		} else if (event.httpStatus.equals(HttpStatus.SC_UNAUTHORIZED)) {
 			progressBar.setVisibility(View.GONE);
 			Toast.makeText(this, R.string.problem_token_expired,
-				Toast.LENGTH_SHORT).show();
+					Toast.LENGTH_SHORT).show();
 			if (resumeSend) {
 				progressCircle.setVisibility(View.GONE);
 				gesturesEnabled = true;
@@ -756,10 +769,13 @@ public class MainActivity extends ActionBarActivity implements
 		for (DialogFragment dialog : dialogs) {
 			dialog.dismiss();
 		}
+		if (playServicesDialog != null) {
+			playServicesDialog.dismiss();
+		}
 		EventBus.getDefault().unregister(this);
 
 		dumpToDB();
-		
+
 		super.onPause();
 	}
 
@@ -785,7 +801,7 @@ public class MainActivity extends ActionBarActivity implements
 	protected void onStart() {
 
 		super.onStart();
-		
+
 		checkSmartphoneSettings();
 
 		// Ask for user's mail address and/or token if not available
@@ -854,14 +870,21 @@ public class MainActivity extends ActionBarActivity implements
 	private void restoreFromDB() {
 		restorePoiFromDB();
 		restorePrimitiveFromDB();
-		
-		locationEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		locationEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		photoEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		photoEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		poiEntitiesDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		poiEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
-		primitiveAttributesEntityDao.queryBuilder().buildDelete().executeDeleteWithoutDetachingEntities();
+
+		locationEntitiesDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		locationEntityDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		photoEntitiesDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		photoEntityDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		poiEntitiesDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		poiEntityDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
+		primitiveAttributesEntityDao.queryBuilder().buildDelete()
+				.executeDeleteWithoutDetachingEntities();
 		daoSession.clear();
 	}
 
@@ -1087,8 +1110,8 @@ public class MainActivity extends ActionBarActivity implements
 			BitmapFactory.decodeFile(imageViewPhoto.filePath, options);
 			DisplayMetrics metrics = new DisplayMetrics();
 			getWindowManager().getDefaultDisplay().getMetrics(metrics);
-			double heightRatio = options.outHeight/metrics.heightPixels;
-			double widthRatio = options.outWidth/metrics.widthPixels;
+			double heightRatio = options.outHeight / metrics.heightPixels;
+			double widthRatio = options.outWidth / metrics.widthPixels;
 
 			if (heightRatio >= widthRatio) {
 				options.inSampleSize = (int) heightRatio;
@@ -1097,7 +1120,8 @@ public class MainActivity extends ActionBarActivity implements
 			}
 			options.inPreferredConfig = Bitmap.Config.RGB_565;
 			options.inJustDecodeBounds = false;
-			imageView.setImageBitmap(BitmapFactory.decodeFile(imageViewPhoto.filePath, options));
+			imageView.setImageBitmap(BitmapFactory.decodeFile(
+					imageViewPhoto.filePath, options));
 			rootView.setBackgroundColor(Color.BLACK);
 			imageViewIndex = newIndex;
 		} else {
